@@ -1,1 +1,1 @@
-# Seyehat-neri-Sistemi-
+bu bir seyahat önerisi sistemi
