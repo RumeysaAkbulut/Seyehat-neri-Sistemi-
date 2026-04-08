@@ -1,1 +1,1 @@
-# Seyehat-neri-Sistemi-
+Kullanici veri modelini olustur.
