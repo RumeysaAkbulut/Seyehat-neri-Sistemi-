@@ -25,13 +25,10 @@ def create_app():
     CORS(app)
     
     from app.models.user import User
-    from app.models.place import Place
     
     from app.controllers.main_controller import main_bp
     from app.controllers.user_controller import user_bp
-    from app.controllers.place_controller import place_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp)
-    app.register_blueprint(place_bp)
     
     return app
