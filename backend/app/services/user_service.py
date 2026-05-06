@@ -33,3 +33,4 @@ class UserService:
     
     def get_all_users(self):
         return self.user_repo.find_all()
+ 
