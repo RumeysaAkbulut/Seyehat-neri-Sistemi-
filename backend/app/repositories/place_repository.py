@@ -2,8 +2,8 @@ from app import db
 from app.models.place import Place
 
 class PlaceRepository:
-    def create(self, name, description, category, city, latitude=None, longitude=None, rating=0.0):
-        place = Place(name=name, description=description, category=category, city=city, latitude=latitude, longitude=longitude, rating=rating)
+    def create(self, name, description, category, city, latitude=None, longitude=None, rating=0.0, image_url=None):
+        place = Place(name=name, description=description, category=category, city=city, latitude=latitude, longitude=longitude, rating=rating, image_url=image_url)
         db.session.add(place)
         db.session.commit()
         return place
