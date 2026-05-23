@@ -30,6 +30,9 @@ class UserService:
         if not user:
             raise ValueError("Kullanici bulunamadi")
         return user
+
+    def get_user_by_id(self, user_id):
+        return self.user_repo.find_by_id(user_id)
     
     def get_all_users(self):
         return self.user_repo.find_all()
