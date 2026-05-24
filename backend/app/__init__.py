@@ -22,7 +22,7 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 86400  # 24 saat
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 86400 * 7  # 7 gün
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -33,6 +33,7 @@ def create_app():
     from app.models.favorite import Favorite
     from app.models.route import Route
     from app.models.review import Review
+    from app.models.collection import Collection, CollectionItem
 
     from app.controllers.main_controller import main_bp
     from app.controllers.user_controller import user_bp
@@ -41,6 +42,7 @@ def create_app():
     from app.controllers.ai_controller import ai_bp
     from app.controllers.route_controller import route_bp
     from app.controllers.review_controller import review_bp
+    from app.controllers.collection_controller import collection_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(place_bp)
@@ -48,6 +50,7 @@ def create_app():
     app.register_blueprint(ai_bp)
     app.register_blueprint(route_bp)
     app.register_blueprint(review_bp)
+    app.register_blueprint(collection_bp)
 
 
     return app

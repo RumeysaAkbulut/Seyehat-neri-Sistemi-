@@ -7,6 +7,7 @@ const links = [
   { to: "/places", label: "Mekanlar", icon: "📍" },
   { to: "/map", label: "Harita", icon: "🗺️" },
   { to: "/routes", label: "Rotalarım", icon: "🛤️" },
+  { to: "/collections", label: "Koleksiyonlar", icon: "📚" },
   { to: "/ai", label: "AI Rota", icon: "✨" },
   { to: "/profile", label: "Profil", icon: "👤" },
 ];

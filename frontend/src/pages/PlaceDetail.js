@@ -40,6 +40,9 @@ export default function PlaceDetail() {
   const [loading, setLoading] = useState(true);
   const [isFav, setIsFav] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [showColMenu, setShowColMenu] = useState(false);
+  const [colMsg, setColMsg] = useState("");
   const [reviews, setReviews] = useState([]);
   const [avgRating, setAvgRating] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
@@ -79,6 +82,11 @@ export default function PlaceDetail() {
         const revRes = await axios.get(`http://localhost:5001/api/reviews/${id}`, authHeader);
         setReviews(revRes.data.reviews || []);
         setAvgRating(revRes.data.average_rating);
+      } catch { /* sessiz */ }
+      // Koleksiyonlar
+      try {
+        const colRes = await axios.get("http://localhost:5001/api/collections/", authHeader);
+        setCollections(colRes.data.collections || []);
       } catch { /* sessiz */ }
     };
     load();
@@ -122,6 +130,24 @@ export default function PlaceDetail() {
     setFavLoading(false);
   };
 
+  const addToCollection = async (colId, colName) => {
+    try {
+      await axios.post(`http://localhost:5001/api/collections/${colId}/items`,
+        { place_id: numId }, authHeader);
+      setColMsg(`✅ "${colName}" koleksiyonuna eklendi`);
+      // place_ids'i güncelle
+      setCollections(prev => prev.map(c =>
+        c.id === colId ? { ...c, place_ids: [...(c.place_ids || []), numId], item_count: c.item_count + 1 } : c
+      ));
+    } catch (e) {
+      const msg = e.response?.data?.error || "Eklenemedi";
+      setColMsg(msg === "Zaten eklenmiş" ? `"${colName}" koleksiyonunda zaten var` : msg);
+    } finally {
+      setShowColMenu(false);
+      setTimeout(() => setColMsg(""), 2500);
+    }
+  };
+
   if (loading) return (
     <div style={s.center}>
       <div style={s.spinner}>⏳</div>
@@ -144,13 +170,46 @@ export default function PlaceDetail() {
       {/* Üst bar */}
       <div style={s.topBar}>
         <button style={s.backBtn} onClick={() => navigate("/places")}>← Geri</button>
-        <button
-          style={{ ...s.favBtn, background: isFav ? "#fef2f2" : t.primaryLight, color: isFav ? "#e11d48" : t.primary, border: `1.5px solid ${isFav ? "#fca5a5" : t.border}` }}
-          onClick={toggleFav}
-          disabled={favLoading}
-        >
-          {isFav ? "❤️ Favoriden Çıkar" : "🤍 Favoriye Ekle"}
-        </button>
+        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+          {colMsg && <span style={s.colMsgBadge}>{colMsg}</span>}
+          {/* Koleksiyona Ekle dropdown */}
+          <div style={{ position:"relative" }}>
+            <button style={s.colBtn} onClick={() => setShowColMenu(v => !v)}>
+              📚 Koleksiyon {showColMenu ? "▲" : "▼"}
+            </button>
+            {showColMenu && (
+              <div style={s.colDropdown}>
+                {collections.length === 0 ? (
+                  <div style={s.colDropEmpty}>
+                    <div>Koleksiyon yok</div>
+                    <button style={s.colDropCreate} onClick={() => navigate("/collections")}>
+                      Oluştur →
+                    </button>
+                  </div>
+                ) : (
+                  collections.map(col => {
+                    const alreadyIn = col.place_ids?.includes(numId);
+                    return (
+                      <button key={col.id} style={{...s.colDropItem, ...(alreadyIn ? s.colDropItemDone : {})}}
+                        onClick={() => !alreadyIn && addToCollection(col.id, col.name)}
+                        disabled={alreadyIn}>
+                        <span>{col.emoji} {col.name}</span>
+                        {alreadyIn && <span style={s.colCheck}>✓</span>}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            style={{ ...s.favBtn, background: isFav ? "#fef2f2" : t.primaryLight, color: isFav ? "#e11d48" : t.primary, border: `1.5px solid ${isFav ? "#fca5a5" : t.border}` }}
+            onClick={toggleFav}
+            disabled={favLoading}
+          >
+            {isFav ? "❤️ Favoriden Çıkar" : "🤍 Favoriye Ekle"}
+          </button>
+        </div>
       </div>
 
       <div style={s.layout}>
@@ -320,6 +379,14 @@ const s = {
   topBar: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" },
   backBtn: { padding: "9px 18px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: "#fff", color: t.textMuted, fontSize: "13px", fontWeight: 600, cursor: "pointer" },
   favBtn: { padding: "9px 18px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+  colBtn: { padding: "9px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: "#fff", color: t.primary, fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+  colDropdown: { position: "absolute", top: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, minWidth: "200px", overflow: "hidden" },
+  colDropItem: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: "13px", color: t.text, cursor: "pointer", textAlign: "left", borderBottom: `1px solid ${t.borderLight}` },
+  colDropItemDone: { background: "#f0fdf4", color: t.primary },
+  colCheck: { color: t.primary, fontWeight: 700 },
+  colDropEmpty: { padding: "14px", fontSize: "12px", color: t.textMuted, textAlign: "center", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" },
+  colDropCreate: { padding: "6px 14px", borderRadius: "8px", border: "none", background: t.gradient, color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer" },
+  colMsgBadge: { fontSize: "12px", color: t.primary, background: t.primaryLight, padding: "6px 12px", borderRadius: "8px", fontWeight: 500 },
   layout: { display: "grid", gridTemplateColumns: "1fr 380px", gap: "1.5rem", alignItems: "start" },
   left: { display: "flex", flexDirection: "column", gap: "1.25rem" },
   right: { display: "flex", flexDirection: "column", gap: "1.25rem" },
