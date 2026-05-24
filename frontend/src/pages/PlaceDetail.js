@@ -233,9 +233,12 @@ export default function PlaceDetail() {
             </div>
             <h1 style={s.name}>{place.name}</h1>
             <div style={s.ratingRow}>
-              <span style={s.stars}>{stars(place.rating)}</span>
-              <span style={s.ratingNum}>{Number(place.rating || 0).toFixed(1)}</span>
+              <span style={s.stars}>{stars(avgRating !== null ? avgRating : place.rating)}</span>
+              <span style={s.ratingNum}>{Number(avgRating !== null ? avgRating : (place.rating || 0)).toFixed(1)}</span>
               <span style={s.ratingLabel}>/ 5.0</span>
+              {avgRating !== null && (
+                <span style={s.reviewCountBadge}>👥 {reviews.length} değerlendirme</span>
+              )}
             </div>
             <p style={s.desc}>{place.description || "Bu mekan için henüz açıklama eklenmemiş."}</p>
           </div>
@@ -400,10 +403,11 @@ const s = {
   cityBadge: { fontSize: "12px", padding: "4px 10px", borderRadius: "8px", background: t.primaryLight, color: t.primary, fontWeight: 600 },
   catBadge: { fontSize: "12px", padding: "4px 10px", borderRadius: "8px", background: "#f1f5f9", color: t.textMuted, fontWeight: 500 },
   name: { fontSize: "28px", fontWeight: 800, color: t.text, margin: "0 0 12px", letterSpacing: "-0.5px" },
-  ratingRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" },
+  ratingRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" },
   stars: { fontSize: "18px", color: "#F59E0B", letterSpacing: "2px" },
   ratingNum: { fontSize: "22px", fontWeight: 800, color: t.text },
   ratingLabel: { fontSize: "14px", color: t.textMuted },
+  reviewCountBadge: { fontSize: "11px", padding: "3px 10px", borderRadius: "8px", background: t.primaryLight, color: t.primary, fontWeight: 600 },
   desc: { fontSize: "15px", color: t.textMuted, lineHeight: 1.7, margin: 0 },
 
   coordCard: { background: "#fff", borderRadius: "16px", padding: "1.5rem", border: `1px solid ${t.border}` },

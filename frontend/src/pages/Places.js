@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
 
-const CATEGORIES = ["Tümü", "müze", "park", "restoran", "tarihi", "alışveriş", "eğlence", "doğa"];
+const CATEGORIES = ["Tümü", "Favorilerim", "müze", "park", "restoran", "tarihi", "alışveriş", "eğlence", "doğa"];
 
 const SAMPLE_PLACES = [
   { id: 1, name: "Topkapı Sarayı", city: "İstanbul", category: "tarihi", description: "Osmanlı İmparatorluğu'nun görkemli sarayı.", latitude: 41.0115, longitude: 28.9833, rating: 4.8, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Topkapi_palace_harem_pool.jpg/640px-Topkapi_palace_harem_pool.jpg" },
@@ -97,11 +98,15 @@ async function fetchWikipediaData(placeName, englishName) {
 
 export default function Places() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [places, setPlaces] = useState(SAMPLE_PLACES);
   const [filtered, setFiltered] = useState(SAMPLE_PLACES);
   const [category, setCategory] = useState("Tümü");
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState(new Set());
+  const [sortBy, setSortBy] = useState("default");
+  const [cityFilter, setCityFilter] = useState("Tüm Şehirler");
+  const [reviewStats, setReviewStats] = useState({}); // { placeId: { avg, count } }
   const [showModal, setShowModal] = useState(false);
   const [mode, setMode] = useState("search"); // "search" | "manual"
   const [form, setForm] = useState(EMPTY_FORM);
@@ -120,29 +125,63 @@ export default function Places() {
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
+    // DB mekanlarını çek (review_avg dahil)
     axios.get("http://localhost:5001/api/places/", authHeader)
       .then(r => {
         if (r.data.places?.length) {
           const ids = new Set(SAMPLE_PLACES.map(p => p.id));
           const newPlaces = r.data.places.filter(p => !ids.has(p.id));
           setPlaces([...SAMPLE_PLACES, ...newPlaces]);
+          // DB mekanların review istatistiklerini kaydet
+          const stats = {};
+          r.data.places.forEach(p => {
+            if (p.review_avg !== null && p.review_avg !== undefined) {
+              stats[p.id] = { avg: p.review_avg, count: p.review_count || 0 };
+            }
+          });
+          setReviewStats(stats);
         }
       }).catch(() => {});
     axios.get("http://localhost:5001/api/favorites/", authHeader)
       .then(r => setFavorites(new Set(r.data.favorites.map(f => f.place_id))))
       .catch(() => {});
+    // Sample mekanlar için review istatistiklerini çek
+    Promise.all(
+      SAMPLE_PLACES.map(p =>
+        axios.get(`http://localhost:5001/api/reviews/${p.id}`, authHeader)
+          .then(r => ({ id: p.id, avg: r.data.average_rating, count: r.data.count }))
+          .catch(() => null)
+      )
+    ).then(results => {
+      const stats = {};
+      results.forEach(r => { if (r && r.avg !== null) stats[r.id] = { avg: r.avg, count: r.count }; });
+      setReviewStats(prev => ({ ...prev, ...stats }));
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const cities = ["Tüm Şehirler", ...Array.from(new Set(places.map(p => p.city))).sort((a, b) => a.localeCompare(b, "tr"))];
+
   useEffect(() => {
     let res = places;
-    if (category !== "Tümü") res = res.filter(p => p.category === category);
+    if (category === "Favorilerim") {
+      res = res.filter(p => favorites.has(p.id));
+    } else if (category !== "Tümü") {
+      res = res.filter(p => p.category === category);
+    }
+    if (cityFilter !== "Tüm Şehirler") {
+      res = res.filter(p => p.city === cityFilter);
+    }
     if (search) res = res.filter(p =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.city.toLowerCase().includes(search.toLowerCase())
     );
+    if (sortBy === "rating_desc") res = [...res].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    else if (sortBy === "rating_asc") res = [...res].sort((a, b) => (a.rating || 0) - (b.rating || 0));
+    else if (sortBy === "city_asc") res = [...res].sort((a, b) => a.city.localeCompare(b.city, "tr"));
+    else if (sortBy === "name_asc") res = [...res].sort((a, b) => a.name.localeCompare(b.name, "tr"));
     setFiltered(res);
-  }, [category, search, places]);
+  }, [category, search, places, favorites, sortBy, cityFilter]);
 
   // Nominatim debounce
   const handlePlaceQueryChange = useCallback((val) => {
@@ -254,10 +293,24 @@ export default function Places() {
       <div style={s.header}>
         <div>
           <h1 style={s.title}>Mekanlar</h1>
-          <p style={s.sub}>{filtered.length} mekan listeleniyor</p>
+          <p style={s.sub}>
+            {category === "Favorilerim"
+              ? `${filtered.length} favori mekan`
+              : `${filtered.length} mekan listeleniyor`}
+          </p>
         </div>
         <div style={s.headerRight}>
           <input style={s.searchInput} placeholder="Mekan veya şehir ara..." value={search} onChange={e => setSearch(e.target.value)} />
+          <select style={s.filterSelect} value={cityFilter} onChange={e => setCityFilter(e.target.value)}>
+            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select style={s.filterSelect} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="default">Varsayılan</option>
+            <option value="rating_desc">⭐ Puan: Yüksekten Düşüğe</option>
+            <option value="rating_asc">⭐ Puan: Düşükten Yükseğe</option>
+            <option value="name_asc">🔤 İsim A–Z</option>
+            <option value="city_asc">📍 Şehir A–Z</option>
+          </select>
           <button style={s.addBtn} onClick={openAdd}>+ Mekan Ekle</button>
         </div>
       </div>
@@ -273,31 +326,41 @@ export default function Places() {
       <div style={s.grid}>
         {filtered.map(place => (
           <div key={place.id} style={s.card}>
-            <div style={s.cardImg}>
+            <div style={{...s.cardImg, cursor:"pointer"}} onClick={() => navigate(`/places/${place.id}`)}>
               {place.image_url
                 ? <img src={place.image_url} alt={place.name} style={s.img} onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
                 : null}
               <div style={{...s.imgFallback, display: place.image_url ? "none" : "flex"}}>
                 <span style={{fontSize:"40px"}}>{categoryEmoji(place.category)}</span>
               </div>
-              <button style={s.favBtn} onClick={() => toggleFavorite(place)}>
+              <button style={s.favBtn} onClick={e => { e.stopPropagation(); toggleFavorite(place); }}>
                 {favorites.has(place.id) ? "❤️" : "🤍"}
               </button>
             </div>
-            <div style={s.cardBody}>
-              <div style={s.cardName}>{place.name}</div>
+            <div style={s.cardBody} onClick={() => navigate(`/places/${place.id}`)} >
+              <div style={{...s.cardName, cursor:"pointer"}}>{place.name}</div>
               <div style={s.cardMeta}>
                 <span style={s.cityTag}>📍 {place.city}</span>
                 <span style={s.catTag}>{place.category}</span>
               </div>
               <div style={s.cardDesc}>{place.description || "—"}</div>
               <div style={s.cardFooter}>
-                <div style={s.rating}>
-                  <span style={s.stars}>{stars(Math.round(place.rating || 0))}</span>
-                  <span style={s.ratingNum}>{Number(place.rating || 0).toFixed(1)}</span>
+                <div style={s.ratingBlock}>
+                  {reviewStats[place.id] ? (
+                    <div style={s.userRating}>
+                      <span style={s.stars}>{stars(Math.round(reviewStats[place.id].avg))}</span>
+                      <span style={s.ratingNum}>{Number(reviewStats[place.id].avg).toFixed(1)}</span>
+                      <span style={s.ratingBadge}>👥 {reviewStats[place.id].count}</span>
+                    </div>
+                  ) : (
+                    <div style={s.rating}>
+                      <span style={s.stars}>{stars(Math.round(place.rating || 0))}</span>
+                      <span style={s.ratingNum}>{Number(place.rating || 0).toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
                 {place.id > 1000 && (
-                  <div style={s.actions}>
+                  <div style={s.actions} onClick={e => e.stopPropagation()}>
                     <button style={s.editBtn} onClick={() => openEdit(place)}>Düzenle</button>
                     <button style={s.deleteBtn} onClick={() => handleDelete(place)}>Sil</button>
                   </div>
@@ -473,7 +536,7 @@ export default function Places() {
 }
 
 function categoryEmoji(cat) {
-  const map = { Tümü:"🔍", müze:"🏛️", park:"🌳", restoran:"🍽️", tarihi:"🏰", alışveriş:"🛍️", eğlence:"🎡", doğa:"🏔️" };
+  const map = { Tümü:"🔍", Favorilerim:"❤️", müze:"🏛️", park:"🌳", restoran:"🍽️", tarihi:"🏰", alışveriş:"🛍️", eğlence:"🎡", doğa:"🏔️" };
   return map[cat] || "📍";
 }
 
@@ -483,7 +546,8 @@ const s = {
   title: { fontSize:"24px", fontWeight:700, color:t.text, margin:0 },
   sub: { fontSize:"13px", color:t.textMuted, marginTop:"4px" },
   headerRight: { display:"flex", gap:"10px", alignItems:"center", flexWrap:"wrap" },
-  searchInput: { padding:"10px 14px", borderRadius:"10px", border:`1.5px solid ${t.border}`, background:"#fff", fontSize:"13px", outline:"none", width:"260px" },
+  searchInput: { padding:"10px 14px", borderRadius:"10px", border:`1.5px solid ${t.border}`, background:"#fff", fontSize:"13px", outline:"none", width:"220px" },
+  filterSelect: { padding:"10px 12px", borderRadius:"10px", border:`1.5px solid ${t.border}`, background:"#fff", fontSize:"13px", color:t.text, outline:"none", cursor:"pointer" },
   addBtn: { padding:"10px 20px", borderRadius:"10px", border:"none", background:t.gradient, color:"#fff", fontSize:"13px", fontWeight:600, cursor:"pointer" },
   filters: { display:"flex", gap:"8px", flexWrap:"wrap", marginBottom:"1.5rem" },
   chip: { padding:"7px 14px", borderRadius:"20px", border:`1.5px solid ${t.border}`, background:"#fff", fontSize:"12px", fontWeight:500, color:t.textMuted, cursor:"pointer" },
@@ -501,9 +565,12 @@ const s = {
   catTag: { fontSize:"11px", padding:"3px 8px", borderRadius:"6px", background:"#F1F5F9", color:t.textMuted, fontWeight:500 },
   cardDesc: { fontSize:"12px", color:t.textMuted, lineHeight:1.5, marginBottom:"10px", minHeight:"32px" },
   cardFooter: { display:"flex", alignItems:"center", justifyContent:"space-between" },
+  ratingBlock: { display:"flex", alignItems:"center" },
   rating: { display:"flex", alignItems:"center", gap:"5px" },
+  userRating: { display:"flex", alignItems:"center", gap:"4px" },
   stars: { fontSize:"12px", color:"#F59E0B" },
   ratingNum: { fontSize:"12px", fontWeight:700, color:t.text },
+  ratingBadge: { fontSize:"10px", padding:"2px 6px", borderRadius:"6px", background:t.primaryLight, color:t.primary, fontWeight:600 },
   actions: { display:"flex", gap:"6px" },
   editBtn: { padding:"4px 10px", borderRadius:"6px", border:`1px solid ${t.border}`, background:"transparent", fontSize:"11px", color:t.textMuted, cursor:"pointer" },
   deleteBtn: { padding:"4px 10px", borderRadius:"6px", border:"1px solid #FECACA", background:"transparent", fontSize:"11px", color:"#EF4444", cursor:"pointer" },

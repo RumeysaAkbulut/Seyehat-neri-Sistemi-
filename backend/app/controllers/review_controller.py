@@ -5,6 +5,19 @@ from app.models.review import Review
 
 review_bp = Blueprint('review', __name__, url_prefix='/api/reviews')
 
+
+def _recalc_place_rating(place_id):
+    """Review'lardan ortalama hesapla; DB'de Place varsa rating'ini güncelle."""
+    from app.models.place import Place
+    reviews = Review.query.filter_by(place_id=place_id).all()
+    avg = round(sum(r.rating for r in reviews) / len(reviews), 2) if reviews else None
+    place = Place.query.get(place_id)
+    if place and avg is not None:
+        place.rating = avg
+        db.session.commit()
+    return avg, len(reviews)
+
+
 @review_bp.route('/<int:place_id>', methods=['GET'])
 @jwt_required()
 def get_reviews(place_id):
@@ -15,6 +28,7 @@ def get_reviews(place_id):
         'count': len(reviews),
         'average_rating': avg,
     }), 200
+
 
 @review_bp.route('/<int:place_id>', methods=['POST'])
 @jwt_required()
@@ -28,18 +42,30 @@ def add_review(place_id):
 
     comment = (data.get('comment') or '').strip()
 
-    # Aynı kullanıcı aynı mekanı tekrar puanlayamaz — günceller
     existing = Review.query.filter_by(user_id=user_id, place_id=place_id).first()
     if existing:
         existing.rating = float(rating)
         existing.comment = comment or existing.comment
         db.session.commit()
-        return jsonify({'message': 'Yorum güncellendi', 'review': existing.to_dict()}), 200
+        avg, count = _recalc_place_rating(place_id)
+        return jsonify({
+            'message': 'Yorum güncellendi',
+            'review': existing.to_dict(),
+            'new_avg': avg,
+            'review_count': count,
+        }), 200
 
     review = Review(user_id=user_id, place_id=place_id, rating=float(rating), comment=comment)
     db.session.add(review)
     db.session.commit()
-    return jsonify({'message': 'Yorum eklendi', 'review': review.to_dict()}), 201
+    avg, count = _recalc_place_rating(place_id)
+    return jsonify({
+        'message': 'Yorum eklendi',
+        'review': review.to_dict(),
+        'new_avg': avg,
+        'review_count': count,
+    }), 201
+
 
 @review_bp.route('/<int:place_id>/<int:review_id>', methods=['DELETE'])
 @jwt_required()
@@ -52,4 +78,9 @@ def delete_review(place_id, review_id):
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     db.session.delete(review)
     db.session.commit()
-    return jsonify({'message': 'Yorum silindi'}), 200
+    avg, count = _recalc_place_rating(place_id)
+    return jsonify({
+        'message': 'Yorum silindi',
+        'new_avg': avg,
+        'review_count': count,
+    }), 200
