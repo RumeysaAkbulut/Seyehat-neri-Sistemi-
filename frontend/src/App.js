@@ -11,6 +11,7 @@ import PlaceDetail from "./pages/PlaceDetail";
 import RoutesList from "./pages/Routes";
 import Collections from "./pages/Collections";
 import SharedRoute from "./pages/SharedRoute";
+import Activity from "./pages/Activity";
 import Navbar from "./components/Navbar";
 
 function PrivateRoute({ children }) {
@@ -35,6 +36,7 @@ function AppRoutes() {
         <Route path="/routes" element={<PrivateRoute><RoutesList /></PrivateRoute>} />
         <Route path="/collections" element={<PrivateRoute><Collections /></PrivateRoute>} />
         <Route path="/share/route/:token" element={<SharedRoute />} />
+        <Route path="/activity" element={<PrivateRoute><Activity /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

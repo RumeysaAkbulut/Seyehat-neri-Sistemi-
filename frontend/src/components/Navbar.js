@@ -8,6 +8,7 @@ const links = [
   { to: "/map", label: "Harita", icon: "🗺️" },
   { to: "/routes", label: "Rotalarım", icon: "🛤️" },
   { to: "/collections", label: "Koleksiyonlar", icon: "📚" },
+  { to: "/activity", label: "Aktiviteler", icon: "⚡" },
   { to: "/ai", label: "AI Rota", icon: "✨" },
   { to: "/profile", label: "Profil", icon: "👤" },
 ];

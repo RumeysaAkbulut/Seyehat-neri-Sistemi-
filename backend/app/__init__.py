@@ -43,6 +43,7 @@ def create_app():
     from app.controllers.route_controller import route_bp, share_bp
     from app.controllers.review_controller import review_bp
     from app.controllers.collection_controller import collection_bp
+    from app.controllers.activity_controller import activity_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(place_bp)
@@ -52,6 +53,7 @@ def create_app():
     app.register_blueprint(share_bp)
     app.register_blueprint(review_bp)
     app.register_blueprint(collection_bp)
+    app.register_blueprint(activity_bp)
 
 
     return app
