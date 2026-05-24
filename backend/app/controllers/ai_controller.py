@@ -67,18 +67,20 @@ Kullanıcı bilgileri:
 
 Lütfen şunları içeren bir rota planı oluştur:
 1. Sabah, öğlen, akşam olarak ayrılmış ziyaret listesi
-2. Her mekan için kısa açıklama ve tahmini ziyaret süresi
+2. Her mekan için kısa açıklama ve tahmini ziyaret süresi (örn. "1.5 saat")
 3. Ulaşım önerileri
 4. Yemek önerileri (kahvaltı, öğle, akşam)
 5. Toplam tahmini maliyet
+6. Rotanın toplam tahmini süresi (ulaşım ve yemek dahil)
 
 Yanıtı Türkçe olarak ver ve madde madde düzenli bir şekilde yaz.
 
-Yanıt metnini bitirdikten sonra, aşağıdaki formatı kullanarak ziyaret edilecek somut mekanların adlarını listele.
+Yanıt metnini bitirdikten sonra, aşağıdaki formatı kullanarak ziyaret edilecek somut mekanların listesini ekle.
 Şehir adını mekan adına dahil etme. Sadece gerçek, coğrafi olarak var olan yerleri ekle.
+"duration" alanına o mekanda harcanacak tahmini süreyi yaz (örn. "1 saat", "45 dk", "2 saat").
 
 ---PLACES_JSON---
-{{"places": [{{"name": "Mekan 1"}}, {{"name": "Mekan 2"}}]}}
+{{"places": [{{"name": "Mekan 1", "duration": "1.5 saat"}}, {{"name": "Mekan 2", "duration": "45 dk"}}]}}
 ---END_PLACES_JSON---"""
 
     api_key = os.getenv('GEMINI_API_KEY')

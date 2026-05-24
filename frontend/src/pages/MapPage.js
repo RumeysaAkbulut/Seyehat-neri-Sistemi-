@@ -105,6 +105,22 @@ function colorIcon(color, size = 12) {
   });
 }
 
+function numberedIcon(num) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      width:30px;height:30px;border-radius:50%;
+      background:linear-gradient(135deg,#0f6e56,#1d9e75);
+      border:2.5px solid #fff;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:12px;font-weight:800;font-family:system-ui;
+    ">${num}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+
 const POI_COLOR = "#7C3AED";
 const ROUTE_COLOR = "#4338CA";
 const CUSTOM_PIN_COLOR = "#F59E0B";
@@ -203,6 +219,7 @@ export default function MapPage() {
           const pts = saved.waypoints.map((wp, i) => ({
             id: `loaded-${saved.id}-${i}-${Date.now()}`,
             lat: wp.lat, lon: wp.lng, isLoaded: true,
+            duration: wp.duration || null,
             tags: { name: wp.name },
           }));
           setRoute(pts);
@@ -257,6 +274,7 @@ export default function MapPage() {
     const pts = saved.waypoints.map((wp, i) => ({
       id: `loaded-${saved.id}-${i}-${Date.now()}`,
       lat: wp.lat, lon: wp.lng, isLoaded: true,
+      duration: wp.duration || null,
       tags: { name: wp.name },
     }));
     setRoute(pts);
@@ -461,7 +479,10 @@ export default function MapPage() {
               {route.map((p, i) => (
                 <div key={p.id} style={s.routeItem}>
                   <span style={s.routeNum}>{i + 1}</span>
-                  <span style={s.routeName}>{p.tags?.name || p.name || "Nokta"}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={s.routeName}>{p.tags?.name || p.name || "Nokta"}</div>
+                    {p.duration && <div style={s.routeDuration}>⏱️ {p.duration}</div>}
+                  </div>
                   <button style={s.removeBtn} onClick={() => p.isCustom ? removeCustomPin(p.id) : toggleRoute(p)}>×</button>
                 </div>
               ))}
@@ -584,6 +605,30 @@ export default function MapPage() {
             );
           })}
 
+          {/* Yüklenen rota (AI / kayıtlı) — numaralı marker'lar */}
+          {route.filter(p => p.isLoaded).map((wp, i) => (
+            <Marker
+              key={`loaded-wp-${wp.id}`}
+              position={[wp.lat, wp.lon]}
+              icon={numberedIcon(i + 1)}
+              zIndexOffset={1000}
+            >
+              <Popup maxWidth={220} autoPan={false}>
+                <div style={{ fontFamily:"system-ui", padding:"4px 2px", minWidth:"160px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"6px" }}>
+                    <div style={{ width:"22px", height:"22px", borderRadius:"50%", background:"linear-gradient(135deg,#0f6e56,#1d9e75)", color:"#fff", fontSize:"11px", fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{i + 1}</div>
+                    <div style={{ fontWeight:700, fontSize:"13px", color:"#1a2e25", lineHeight:1.3 }}>{wp.tags?.name || wp.name || `Durak ${i + 1}`}</div>
+                  </div>
+                  {wp.duration && (
+                    <div style={{ display:"inline-flex", alignItems:"center", gap:"4px", fontSize:"12px", color:"#0f6e56", background:"#e6f7f0", padding:"3px 8px", borderRadius:"6px", fontWeight:600 }}>
+                      ⏱️ {wp.duration}
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
           {pois.map(poi => {
             const isInRoute = !!route.find(p => p.id === poi.id);
             const isAdded = addedIds.has(poi.id);
@@ -671,8 +716,9 @@ const s = {
   poiBtnDone: { background: "#ECFDF5", color: "#10B981", borderColor: "#10B981" },
   routeList: { display: "flex", flexDirection: "column", gap: "4px", marginBottom: "8px" },
   routeItem: { display: "flex", alignItems: "center", gap: "6px", padding: "5px 8px", background: t.primaryLight, borderRadius: "8px" },
-  routeNum: { fontSize: "11px", fontWeight: 700, color: t.primary, width: "16px" },
-  routeName: { flex: 1, fontSize: "11px", color: t.text },
+  routeNum: { fontSize: "11px", fontWeight: 700, color: t.primary, width: "16px", flexShrink: 0 },
+  routeName: { fontSize: "11px", color: t.text, fontWeight: 600 },
+  routeDuration: { fontSize: "10px", color: t.primary, marginTop: "1px" },
   removeBtn: { background: "none", border: "none", color: "#EF4444", fontSize: "15px", cursor: "pointer", lineHeight: 1 },
   routeActions: { display: "flex", gap: "6px", marginTop: "4px" },
   saveRouteBtn: { flex: 1, padding: "6px", borderRadius: "8px", border: "none", background: t.gradient, color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer" },

@@ -89,6 +89,7 @@ export default function AIRecommend() {
             lat: parseFloat(data[0].lat),
             lng: parseFloat(data[0].lon),
             name: place.name,
+            duration: place.duration || null,
           });
         }
         // Nominatim rate limit — istekler arası 300ms bekle
