@@ -40,7 +40,7 @@ def create_app():
     from app.controllers.place_controller import place_bp
     from app.controllers.favorite_controller import favorite_bp
     from app.controllers.ai_controller import ai_bp
-    from app.controllers.route_controller import route_bp
+    from app.controllers.route_controller import route_bp, share_bp
     from app.controllers.review_controller import review_bp
     from app.controllers.collection_controller import collection_bp
     app.register_blueprint(main_bp)
@@ -49,6 +49,7 @@ def create_app():
     app.register_blueprint(favorite_bp)
     app.register_blueprint(ai_bp)
     app.register_blueprint(route_bp)
+    app.register_blueprint(share_bp)
     app.register_blueprint(review_bp)
     app.register_blueprint(collection_bp)
 

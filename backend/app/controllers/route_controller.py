@@ -1,9 +1,13 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.route_service import RouteService
+from app import db
+import uuid
 
 route_bp = Blueprint('route', __name__, url_prefix='/api/routes')
 route_service = RouteService()
+
+share_bp = Blueprint('share', __name__, url_prefix='/api/share')
 
 @route_bp.route('/', methods=['GET'])
 @jwt_required()
@@ -67,3 +71,31 @@ def delete_route(route_id):
         return jsonify({'error': 'Yetkisiz erişim'}), 403
     route_service.delete_route(route)
     return jsonify({'message': 'Rota silindi'}), 200
+
+
+@route_bp.route('/<int:route_id>/share', methods=['POST'])
+@jwt_required()
+def generate_share_link(route_id):
+    """Rota için paylaşım tokeni üret (yoksa yeni oluştur, varsa döndür)."""
+    user_id = int(get_jwt_identity())
+    route = route_service.get_route_by_id(route_id)
+    if not route:
+        return jsonify({'error': 'Rota bulunamadı'}), 404
+    if route.user_id != user_id:
+        return jsonify({'error': 'Yetkisiz erişim'}), 403
+    if not route.share_token:
+        route.share_token = str(uuid.uuid4())
+        db.session.commit()
+    return jsonify({'share_token': route.share_token}), 200
+
+
+# ── Public share endpoint (JWT gerektirmez) ──────────────────────────────────
+
+@share_bp.route('/route/<token>', methods=['GET'])
+def get_shared_route(token):
+    """Paylaşım tokeni ile rotayı herkese açık getir."""
+    from app.models.route import Route
+    route = Route.query.filter_by(share_token=token).first()
+    if not route:
+        return jsonify({'error': 'Rota bulunamadı veya paylaşılmamış'}), 404
+    return jsonify({'route': route.to_dict()}), 200

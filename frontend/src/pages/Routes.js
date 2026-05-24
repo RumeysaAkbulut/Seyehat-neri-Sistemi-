@@ -13,6 +13,8 @@ export default function Routes() {
   const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [shareCopied, setShareCopied] = useState(null); // routeId whose link was just copied
+  const [shareLoading, setShareLoading] = useState(null); // routeId being processed
 
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -50,6 +52,22 @@ export default function Routes() {
     // route verisini localStorage'a kaydedip harita sayfasına yönlendir
     localStorage.setItem("load_route", JSON.stringify(route));
     navigate("/map");
+  };
+
+  const handleShare = async (routeId) => {
+    setShareLoading(routeId);
+    try {
+      const res = await axios.post(`${API}/api/routes/${routeId}/share`, {}, authHeader);
+      const token = res.data.share_token;
+      const link = `${window.location.origin}/share/route/${token}`;
+      await navigator.clipboard.writeText(link);
+      setShareCopied(routeId);
+      setTimeout(() => setShareCopied(null), 2500);
+    } catch {
+      setError("Paylaşım linki oluşturulamadı.");
+    } finally {
+      setShareLoading(null);
+    }
   };
 
   if (loading) return (
@@ -147,6 +165,13 @@ export default function Routes() {
                 <button style={s.mapBtn} onClick={() => loadOnMap(route)}>
                   🗺️ Haritada Aç
                 </button>
+                <button
+                  style={{ ...s.shareBtn, ...(shareCopied === route.id ? s.shareBtnCopied : {}) }}
+                  onClick={() => handleShare(route.id)}
+                  disabled={shareLoading === route.id}
+                >
+                  {shareCopied === route.id ? "✅ Kopyalandı!" : shareLoading === route.id ? "⏳" : "🔗 Paylaş"}
+                </button>
                 {deleteId === route.id ? (
                   <div style={s.confirmRow}>
                     <span style={s.confirmText}>Emin misin?</span>
@@ -205,8 +230,10 @@ const s = {
   waypointName: { fontSize: "13px", fontWeight: 600, color: "#1a2e25" },
   waypointCoord: { fontSize: "11px", color: "#7a9e8e", fontFamily: "monospace" },
 
-  actions: { display: "flex", gap: "8px", alignItems: "center", marginTop: "4px", borderTop: "1px solid #f0f4f3", paddingTop: "12px" },
+  actions: { display: "flex", gap: "8px", alignItems: "center", marginTop: "4px", borderTop: "1px solid #f0f4f3", paddingTop: "12px", flexWrap: "wrap" },
   mapBtn: { flex: 1, padding: "9px 14px", borderRadius: "10px", border: "none", background: "linear-gradient(135deg,#0f6e56,#1d9e75)", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
+  shareBtn: { padding: "9px 14px", borderRadius: "10px", border: "1.5px solid #0f6e56", background: "#fff", color: "#0f6e56", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
+  shareBtnCopied: { background: "#e6f7f0", borderColor: "#0f6e56", color: "#0f6e56" },
   delBtn: { padding: "9px 14px", borderRadius: "10px", border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
   confirmRow: { display: "flex", alignItems: "center", gap: "6px" },
   confirmText: { fontSize: "12px", color: "#dc2626", fontWeight: 600 },

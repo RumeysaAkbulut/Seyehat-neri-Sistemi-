@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime
 import json
+import uuid
 
 class Route(db.Model):
     __tablename__ = 'routes'
@@ -10,6 +11,7 @@ class Route(db.Model):
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     waypoints = db.Column(db.Text, default='[]')  # JSON string: [{lat, lng, name, place_id?}]
+    share_token = db.Column(db.String(36), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -29,6 +31,7 @@ class Route(db.Model):
             'name': self.name,
             'description': self.description,
             'waypoints': self.get_waypoints(),
+            'share_token': self.share_token,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
