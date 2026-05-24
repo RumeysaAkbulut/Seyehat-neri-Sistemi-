@@ -159,10 +159,108 @@ export default function MapPage() {
   const [addingId, setAddingId] = useState(null);
   const [successMsg, setSuccessMsg] = useState("");
   const [customPins, setCustomPins] = useState([]);
+  const [savedRoutes, setSavedRoutes] = useState([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [routeName, setRouteName] = useState("");
+  const [savingRoute, setSavingRoute] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [mapType, setMapType] = useState("street"); // "street" | "satellite"
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsMarker, setGpsMarker] = useState(null);
   const pinCountRef = useRef(0);
   const debounceRef = useRef(null);
 
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+
+  useEffect(() => {
+    axios.get("http://localhost:5001/api/routes/", authHeader)
+      .then(r => setSavedRoutes(r.data.routes || []))
+      .catch(() => {});
+    // Rotalarım sayfasından "Haritada Aç" ile gelen rotayı yükle
+    const pendingRoute = localStorage.getItem("load_route");
+    if (pendingRoute) {
+      try {
+        const saved = JSON.parse(pendingRoute);
+        if (saved?.waypoints?.length) {
+          const pts = saved.waypoints.map((wp, i) => ({
+            id: `loaded-${saved.id}-${i}-${Date.now()}`,
+            lat: wp.lat, lon: wp.lng, isLoaded: true,
+            tags: { name: wp.name },
+          }));
+          setRoute(pts);
+          setMapCenter([pts[0].lat, pts[0].lon]);
+          setMapZoom(12);
+          setSuccessMsg(`"${saved.name}" rotası yüklendi!`);
+          setTimeout(() => setSuccessMsg(""), 3000);
+        }
+      } catch { /* sessiz */ }
+      localStorage.removeItem("load_route");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const saveCurrentRoute = async () => {
+    if (!routeName.trim()) { setSaveError("Rota adı zorunludur."); return; }
+    setSavingRoute(true); setSaveError("");
+    const waypoints = route.map(p => ({
+      lat: p.lat, lng: p.lon, name: p.tags?.name || p.name || "Nokta",
+    }));
+    try {
+      const res = await axios.post("http://localhost:5001/api/routes/", { name: routeName.trim(), waypoints }, authHeader);
+      setSavedRoutes(prev => [res.data.route, ...prev]);
+      setShowSaveModal(false);
+      setRouteName("");
+      setSuccessMsg(`"${res.data.route.name}" rotası kaydedildi!`);
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (e) {
+      setSaveError(e.response?.data?.error || "Kayıt başarısız.");
+    } finally { setSavingRoute(false); }
+  };
+
+  const loadSavedRoute = (saved) => {
+    const pts = saved.waypoints.map((wp, i) => ({
+      id: `loaded-${saved.id}-${i}-${Date.now()}`,
+      lat: wp.lat, lon: wp.lng, isLoaded: true,
+      tags: { name: wp.name },
+    }));
+    setRoute(pts);
+    if (pts.length > 0) { setMapCenter([pts[0].lat, pts[0].lon]); setMapZoom(12); }
+    setSuccessMsg(`"${saved.name}" rotası yüklendi!`);
+    setTimeout(() => setSuccessMsg(""), 3000);
+  };
+
+  const deleteSavedRoute = async (routeId) => {
+    if (!window.confirm("Bu rota silinsin mi?")) return;
+    try {
+      await axios.delete(`http://localhost:5001/api/routes/${routeId}`, authHeader);
+      setSavedRoutes(prev => prev.filter(r => r.id !== routeId));
+    } catch { alert("Rota silinemedi."); }
+  };
+
+  const locateMe = () => {
+    if (!navigator.geolocation) {
+      setCityError("Tarayıcınız konum desteklemiyor.");
+      return;
+    }
+    setGpsLoading(true);
+    setCityError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setGpsMarker({ lat, lng });
+        setMapCenter([lat, lng]);
+        setMapZoom(14);
+        setGpsLoading(false);
+        setSuccessMsg("Konumunuz haritada gösteriliyor!");
+        setTimeout(() => setSuccessMsg(""), 3000);
+      },
+      (err) => {
+        setCityError("Konum alınamadı: " + (err.message || "İzin verilmedi."));
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  };
 
   const searchCity = useCallback(async (query) => {
     if (!query.trim()) return;
@@ -258,6 +356,25 @@ export default function MapPage() {
           {cityError && <div style={s.errorMsg}>{cityError}</div>}
           {cityLoading && <div style={s.loadingMsg}>Popüler mekanlar yükleniyor...</div>}
           {successMsg && <div style={s.successMsg}>✅ {successMsg}</div>}
+
+          {/* GPS + harita türü */}
+          <div style={s.toolRow}>
+            <button style={s.gpsBtn} onClick={locateMe} disabled={gpsLoading} title="Beni bul">
+              {gpsLoading ? "⏳" : "📍"} {gpsLoading ? "Konum alınıyor..." : "Beni Bul"}
+            </button>
+            <div style={s.mapTypeTabs}>
+              <button
+                style={{...s.mapTypeBtn, ...(mapType === "street" ? s.mapTypeBtnActive : {})}}
+                onClick={() => setMapType("street")}
+                title="Sokak haritası"
+              >🗺️</button>
+              <button
+                style={{...s.mapTypeBtn, ...(mapType === "satellite" ? s.mapTypeBtnActive : {})}}
+                onClick={() => setMapType("satellite")}
+                title="Uydu görüntüsü"
+              >🛰️</button>
+            </div>
+          </div>
         </div>
 
         {/* POI Listesi */}
@@ -309,7 +426,31 @@ export default function MapPage() {
                 </div>
               ))}
             </div>
-            <button style={s.clearBtn} onClick={() => setRoute([])}>Rotayı Temizle</button>
+            <div style={s.routeActions}>
+              <button style={s.saveRouteBtn} onClick={() => { setRouteName(""); setSaveError(""); setShowSaveModal(true); }}>
+                💾 Kaydet
+              </button>
+              <button style={s.clearBtn} onClick={() => setRoute([])}>🗑️ Temizle</button>
+            </div>
+          </div>
+        )}
+
+        {/* Kayıtlı Rotalar */}
+        {savedRoutes.length > 0 && (
+          <div style={s.section}>
+            <div style={s.sectionLabel}>Kayıtlı Rotalar ({savedRoutes.length})</div>
+            <div style={s.savedList}>
+              {savedRoutes.map(sr => (
+                <div key={sr.id} style={s.savedItem}>
+                  <div style={s.savedName}>{sr.name}</div>
+                  <div style={s.savedMeta}>{sr.waypoints.length} durak · {new Date(sr.created_at).toLocaleDateString("tr-TR")}</div>
+                  <div style={s.savedBtns}>
+                    <button style={s.loadBtn} onClick={() => loadSavedRoute(sr)}>📂 Yükle</button>
+                    <button style={s.delSavedBtn} onClick={() => deleteSavedRoute(sr.id)}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -325,13 +466,52 @@ export default function MapPage() {
         </div>
       </div>
 
+      {/* Rota Kaydet Modal */}
+      {showSaveModal && (
+        <div style={s.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowSaveModal(false); }}>
+          <div style={s.modal}>
+            <div style={s.modalHead}>
+              <span style={s.modalTitle}>Rotayı Kaydet</span>
+              <button style={s.modalClose} onClick={() => setShowSaveModal(false)}>✕</button>
+            </div>
+            <div style={s.modalBody}>
+              <div style={s.modalHint}>{route.length} durak kayıt altına alınacak</div>
+              <input
+                style={s.modalInput}
+                placeholder="Rota adı girin... (ör. İstanbul Turu)"
+                value={routeName}
+                onChange={e => setRouteName(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && saveCurrentRoute()}
+                autoFocus
+              />
+              {saveError && <div style={s.saveError}>{saveError}</div>}
+            </div>
+            <div style={s.modalFoot}>
+              <button style={s.modalCancel} onClick={() => setShowSaveModal(false)}>İptal</button>
+              <button style={{...s.modalSave, ...(savingRoute ? {opacity:0.6} : {})}} onClick={saveCurrentRoute} disabled={savingRoute}>
+                {savingRoute ? "Kaydediliyor..." : "💾 Kaydet"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Harita */}
       <div style={s.mapWrap}>
         <MapContainer center={mapCenter} zoom={6} style={{ width: "100%", height: "100%" }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          />
+          {mapType === "street" ? (
+            <TileLayer
+              key="street"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+          ) : (
+            <TileLayer
+              key="satellite"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            />
+          )}
           <FlyTo center={mapCenter} zoom={mapZoom} />
           <MapClickHandler onMapClick={handleMapClick} />
 
@@ -387,6 +567,28 @@ export default function MapPage() {
             );
           })}
 
+          {/* GPS konumu */}
+          {gpsMarker && (
+            <Marker
+              position={[gpsMarker.lat, gpsMarker.lng]}
+              icon={L.divIcon({
+                className: "",
+                html: `<div style="width:18px;height:18px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 0 0 3px rgba(37,99,235,0.35)"></div>`,
+                iconSize: [18, 18],
+                iconAnchor: [9, 9],
+              })}
+            >
+              <Popup maxWidth={160} autoPan={false}>
+                <div style={{ fontFamily: "system-ui", fontSize: "13px", fontWeight: 700, color: "#1E293B" }}>
+                  📍 Konumunuz
+                  <div style={{ fontSize: "11px", color: "#64748B", marginTop: "3px", fontWeight: 400 }}>
+                    {gpsMarker.lat.toFixed(5)}, {gpsMarker.lng.toFixed(5)}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+
           {routeCoords.length > 1 && (
             <Polyline positions={routeCoords} color={ROUTE_COLOR} weight={3} dashArray="8,5" />
           )}
@@ -427,7 +629,33 @@ const s = {
   routeNum: { fontSize: "11px", fontWeight: 700, color: t.primary, width: "16px" },
   routeName: { flex: 1, fontSize: "11px", color: t.text },
   removeBtn: { background: "none", border: "none", color: "#EF4444", fontSize: "15px", cursor: "pointer", lineHeight: 1 },
-  clearBtn: { width: "100%", padding: "6px", borderRadius: "8px", border: "1px solid #FECACA", background: "transparent", color: "#EF4444", fontSize: "11px", cursor: "pointer" },
+  routeActions: { display: "flex", gap: "6px", marginTop: "4px" },
+  saveRouteBtn: { flex: 1, padding: "6px", borderRadius: "8px", border: "none", background: t.gradient, color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer" },
+  clearBtn: { flex: 1, padding: "6px", borderRadius: "8px", border: "1px solid #FECACA", background: "transparent", color: "#EF4444", fontSize: "11px", cursor: "pointer" },
+  savedList: { display: "flex", flexDirection: "column", gap: "6px" },
+  savedItem: { padding: "8px 10px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "#FAFAFA" },
+  savedName: { fontSize: "12px", fontWeight: 700, color: t.text, marginBottom: "2px" },
+  savedMeta: { fontSize: "10px", color: t.textMuted, marginBottom: "6px" },
+  savedBtns: { display: "flex", gap: "5px" },
+  loadBtn: { flex: 1, padding: "4px 6px", borderRadius: "6px", border: `1px solid ${t.primary}`, background: t.primaryLight, color: t.primary, fontSize: "10px", fontWeight: 600, cursor: "pointer" },
+  delSavedBtn: { padding: "4px 8px", borderRadius: "6px", border: "1px solid #FECACA", background: "transparent", color: "#EF4444", fontSize: "10px", cursor: "pointer" },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center" },
+  modal: { background: "#fff", borderRadius: "16px", width: "360px", boxShadow: "0 16px 48px rgba(0,0,0,0.18)" },
+  modalHead: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.5rem 0.75rem", borderBottom: `1px solid ${t.border}` },
+  modalTitle: { fontSize: "16px", fontWeight: 700, color: t.text },
+  modalClose: { background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: t.textMuted },
+  modalBody: { padding: "1rem 1.5rem" },
+  modalHint: { fontSize: "12px", color: t.textMuted, marginBottom: "10px" },
+  modalInput: { width: "100%", padding: "10px 12px", borderRadius: "10px", border: `1.5px solid ${t.primary}`, fontSize: "13px", color: t.text, outline: "none", boxSizing: "border-box" },
+  saveError: { marginTop: "8px", fontSize: "12px", color: "#EF4444", background: "#FEF2F2", padding: "6px 10px", borderRadius: "8px" },
+  modalFoot: { display: "flex", gap: "8px", padding: "0.75rem 1.5rem 1.25rem" },
+  modalCancel: { flex: 1, padding: "9px", borderRadius: "9px", border: `1px solid ${t.border}`, background: "transparent", color: t.textMuted, fontSize: "13px", cursor: "pointer" },
+  modalSave: { flex: 2, padding: "9px", borderRadius: "9px", border: "none", background: t.gradient, color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+  toolRow: { display: "flex", gap: "6px", marginTop: "10px", alignItems: "center" },
+  gpsBtn: { flex: 1, padding: "7px 10px", borderRadius: "9px", border: `1.5px solid ${t.border}`, background: "#fff", fontSize: "12px", fontWeight: 600, color: t.primary, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" },
+  mapTypeTabs: { display: "flex", borderRadius: "9px", border: `1.5px solid ${t.border}`, overflow: "hidden" },
+  mapTypeBtn: { padding: "7px 11px", border: "none", background: "#fff", fontSize: "16px", cursor: "pointer" },
+  mapTypeBtnActive: { background: t.primaryLight },
   legend: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" },
   legendLabel: { fontSize: "12px", color: t.textMuted },
   mapWrap: { flex: 1, position: "relative" },

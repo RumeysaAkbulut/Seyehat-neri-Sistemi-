@@ -31,17 +31,23 @@ def create_app():
 
     from app.models.user import User
     from app.models.favorite import Favorite
+    from app.models.route import Route
+    from app.models.review import Review
 
     from app.controllers.main_controller import main_bp
     from app.controllers.user_controller import user_bp
     from app.controllers.place_controller import place_bp
     from app.controllers.favorite_controller import favorite_bp
     from app.controllers.ai_controller import ai_bp
+    from app.controllers.route_controller import route_bp
+    from app.controllers.review_controller import review_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(place_bp)
     app.register_blueprint(favorite_bp)
     app.register_blueprint(ai_bp)
+    app.register_blueprint(route_bp)
+    app.register_blueprint(review_bp)
 
 
     return app

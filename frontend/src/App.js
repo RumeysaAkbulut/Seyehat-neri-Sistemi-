@@ -7,6 +7,8 @@ import Places from "./pages/Places";
 import MapPage from "./pages/MapPage";
 import AIRecommend from "./pages/AIRecommend";
 import Profile from "./pages/Profile";
+import PlaceDetail from "./pages/PlaceDetail";
+import RoutesList from "./pages/Routes";
 import Navbar from "./components/Navbar";
 
 function PrivateRoute({ children }) {
@@ -27,6 +29,8 @@ function AppRoutes() {
         <Route path="/map" element={<PrivateRoute><MapPage /></PrivateRoute>} />
         <Route path="/ai" element={<PrivateRoute><AIRecommend /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/places/:id" element={<PrivateRoute><PlaceDetail /></PrivateRoute>} />
+        <Route path="/routes" element={<PrivateRoute><RoutesList /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

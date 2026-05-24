@@ -1,16 +1,34 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 const features = [
-  { icon: "📍", title: "Mekanları Keşfet", desc: "Kategoriye ve şehre göre filtreleyerek en iyi mekanları bul, favorile.", link: "/places", color: "#EEF2FF" },
-  { icon: "🗺️", title: "Haritada Gör", desc: "Mekanları interaktif harita üzerinde görüntüle ve rota planla.", link: "/map", color: "#F0FDF4" },
-  { icon: "✨", title: "AI Rota Önerisi", desc: "Yapay zeka ile sana özel kişiselleştirilmiş gezi planı al.", link: "/ai", color: "#FDF4FF" },
+  { icon: "📍", title: "Mekanları Keşfet", desc: "Kategoriye ve şehre göre filtreleyerek en iyi mekanları bul, favorile.", link: "/places", color: t.primaryLight },
+  { icon: "🗺️", title: "Haritada Gör", desc: "Mekanları interaktif harita üzerinde görüntüle ve rota planla.", link: "/map", color: "#f0fdf4" },
+  { icon: "🛤️", title: "Rotalarım", desc: "Kaydettiğin tüm seyahat rotalarını görüntüle, düzenle ve haritada aç.", link: "/routes", color: "#fff7ed" },
+  { icon: "✨", title: "AI Rota Önerisi", desc: "Yapay zeka ile sana özel kişiselleştirilmiş gezi planı al.", link: "/ai", color: "#fdf4ff" },
 ];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ places: null, cities: null, favorites: null, routes: null, reviews: null });
+
+  useEffect(() => {
+    if (!token) return;
+    axios.get("http://localhost:5001/api/stats", {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => setStats(r.data)).catch(() => {});
+  }, [token]);
+
+  const statItems = [
+    { n: stats.cities !== null ? `${stats.cities}+` : "—", l: "Şehir" },
+    { n: stats.places !== null ? `${stats.places}+` : "—", l: "Mekan" },
+    { n: stats.favorites !== null ? stats.favorites : "—", l: "Favori" },
+    { n: stats.routes !== null ? stats.routes : "—", l: "Rotam" },
+  ];
 
   return (
     <div style={s.page}>
@@ -57,8 +75,8 @@ export default function Dashboard() {
       </div>
 
       <div style={s.stats}>
-        {[{n:"50+",l:"Şehir"},{n:"200+",l:"Mekan"},{n:"AI",l:"Destekli"},{n:"Ücretsiz",l:"Kullanım"}].map((st,i) => (
-          <div key={i} style={s.stat}>
+        {statItems.map((st, i) => (
+          <div key={i} style={{...s.stat, borderRight: i < statItems.length - 1 ? `1px solid ${t.border}` : "none"}}>
             <div style={s.statNum}>{st.n}</div>
             <div style={s.statLabel}>{st.l}</div>
           </div>
@@ -80,13 +98,13 @@ const s = {
   btnSecondary: { padding:"12px 24px", borderRadius:"12px", border:"1.5px solid rgba(255,255,255,0.35)", background:"transparent", color:"#fff", fontSize:"14px", fontWeight:600, cursor:"pointer" },
   heroVisual: { width:"300px", height:"220px", flexShrink:0 },
   features: { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:"1.25rem", padding:"2.5rem 3rem" },
-  card: { borderRadius:"16px", padding:"1.75rem", border:`1px solid ${t.border}`, cursor:"pointer", boxShadow:t.shadow },
+  card: { borderRadius:"16px", padding:"1.75rem", border:`1px solid ${t.border}`, cursor:"pointer", boxShadow:t.shadow, transition:"transform 0.15s" },
   cardIcon: { fontSize:"32px", marginBottom:"12px" },
   cardTitle: { fontSize:"16px", fontWeight:700, color:t.text, marginBottom:"8px" },
   cardDesc: { fontSize:"13px", color:t.textMuted, lineHeight:1.6, marginBottom:"16px" },
   cardArrow: { fontSize:"13px", color:t.primary, fontWeight:700 },
   stats: { display:"flex", borderTop:`1px solid ${t.border}`, background:"#fff" },
-  stat: { flex:1, textAlign:"center", padding:"1.5rem", borderRight:`1px solid ${t.border}` },
+  stat: { flex:1, textAlign:"center", padding:"1.5rem" },
   statNum: { fontSize:"24px", fontWeight:800, color:t.primary },
   statLabel: { fontSize:"12px", color:t.textMuted, marginTop:"4px" },
 };
