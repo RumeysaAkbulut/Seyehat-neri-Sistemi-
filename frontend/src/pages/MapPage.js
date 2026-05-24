@@ -6,14 +6,25 @@ import "leaflet/dist/leaflet.css";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
 
-// OSRM public demo — API key gerekmez, gerçek yol geometrisi döner
-async function fetchOSRMRoute(waypoints) {
+// Her mod için farklı OSRM backend — tümü ücretsiz, API key gerekmez
+const OSRM_BACKENDS = {
+  driving: 'https://router.project-osrm.org/route/v1/driving',
+  walking: 'https://routing.openstreetmap.de/routed-foot/route/v1/driving',
+  cycling: 'https://routing.openstreetmap.de/routed-bike/route/v1/driving',
+};
+
+const MODE_META = {
+  driving: { label: '🚗 Araba',    color: '#4338CA' },
+  walking: { label: '🚶 Yürüyüş', color: '#0f6e56' },
+  cycling: { label: '🚲 Bisiklet', color: '#D97706' },
+};
+
+async function fetchOSRMRoute(waypoints, mode = 'driving') {
   if (waypoints.length < 2) return null;
   try {
     const coords = waypoints.map(wp => `${wp.lon},${wp.lat}`).join(';');
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
-    );
+    const base = OSRM_BACKENDS[mode] || OSRM_BACKENDS.driving;
+    const res = await fetch(`${base}/${coords}?overview=full&geometries=geojson`);
     const data = await res.json();
     if (data.code !== 'Ok' || !data.routes?.[0]) return null;
     // OSRM [lon, lat] döndürür → Leaflet [lat, lon] ister
@@ -200,6 +211,7 @@ export default function MapPage() {
   const [gpsMarker, setGpsMarker] = useState(null);
   const [routeGeometry, setRouteGeometry] = useState([]); // OSRM'den gelen gerçek yol koordinatları
   const [routingLoading, setRoutingLoading] = useState(false);
+  const [travelMode, setTravelMode] = useState('driving'); // 'driving' | 'walking' | 'cycling'
   const pinCountRef = useRef(0);
   const debounceRef = useRef(null);
   const routingTimerRef = useRef(null);
@@ -234,7 +246,7 @@ export default function MapPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Route waypoint'leri değişince OSRM'den gerçek yol geometrisini çek
+  // Route veya ulaşım modu değişince OSRM'den gerçek yol geometrisini çek
   useEffect(() => {
     if (route.length < 2) {
       setRouteGeometry([]);
@@ -244,13 +256,13 @@ export default function MapPage() {
     if (routingTimerRef.current) clearTimeout(routingTimerRef.current);
     setRoutingLoading(true);
     routingTimerRef.current = setTimeout(async () => {
-      const geometry = await fetchOSRMRoute(route);
+      const geometry = await fetchOSRMRoute(route, travelMode);
       // OSRM başarısız olursa düz çizgiye fallback
       setRouteGeometry(geometry || route.map(p => [p.lat, p.lon]));
       setRoutingLoading(false);
-    }, 600); // Kullanıcı hızlı ekliyorsa debounce ile tek istek
+    }, 600);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route]);
+  }, [route, travelMode]);
 
   const saveCurrentRoute = async () => {
     if (!routeName.trim()) { setSaveError("Rota adı zorunludur."); return; }
@@ -429,6 +441,26 @@ export default function MapPage() {
               >🛰️</button>
             </div>
           </div>
+
+          {/* Ulaşım modu */}
+          <div style={s.modeRow}>
+            <div style={s.sectionLabel} >Ulaşım Modu</div>
+            <div style={s.modeTabs}>
+              {Object.entries(MODE_META).map(([key, meta]) => (
+                <button
+                  key={key}
+                  style={{
+                    ...s.modeBtn,
+                    ...(travelMode === key ? { ...s.modeBtnActive, borderColor: meta.color, color: meta.color, background: meta.color + '18' } : {}),
+                  }}
+                  onClick={() => setTravelMode(key)}
+                  title={meta.label}
+                >
+                  {meta.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* POI Listesi */}
@@ -472,8 +504,8 @@ export default function MapPage() {
           <div style={s.section}>
             <div style={s.sectionLabel}>
               Oluşturulan Rota ({route.length} nokta)
-              {routingLoading && <span style={s.routingBadge}>⏳ Yol hesaplanıyor...</span>}
-              {!routingLoading && routeGeometry.length > 1 && <span style={s.routedBadge}>🛣️ Yol takip ediyor</span>}
+              {routingLoading && <span style={s.routingBadge}>⏳ {MODE_META[travelMode].label} rotası hesaplanıyor...</span>}
+              {!routingLoading && routeGeometry.length > 1 && <span style={{...s.routedBadge, color: MODE_META[travelMode].color}}>{MODE_META[travelMode].label} rotası</span>}
             </div>
             <div style={s.routeList}>
               {route.map((p, i) => (
@@ -674,13 +706,13 @@ export default function MapPage() {
             </Marker>
           )}
 
-          {/* Gerçek yol geometrisi (OSRM) */}
+          {/* Gerçek yol geometrisi (OSRM) — renk moda göre */}
           {routeGeometry.length > 1 && (
-            <Polyline positions={routeGeometry} color={ROUTE_COLOR} weight={4} opacity={0.85} />
+            <Polyline positions={routeGeometry} color={MODE_META[travelMode].color} weight={4} opacity={0.85} />
           )}
           {/* OSRM yüklenirken geçici kesik düz çizgi */}
           {routingLoading && routeCoords.length > 1 && (
-            <Polyline positions={routeCoords} color={ROUTE_COLOR} weight={2} dashArray="8,8" opacity={0.35} />
+            <Polyline positions={routeCoords} color={MODE_META[travelMode].color} weight={2} dashArray="8,8" opacity={0.35} />
           )}
         </MapContainer>
       </div>
@@ -743,6 +775,10 @@ const s = {
   modalCancel: { flex: 1, padding: "9px", borderRadius: "9px", border: `1px solid ${t.border}`, background: "transparent", color: t.textMuted, fontSize: "13px", cursor: "pointer" },
   modalSave: { flex: 2, padding: "9px", borderRadius: "9px", border: "none", background: t.gradient, color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
   toolRow: { display: "flex", gap: "6px", marginTop: "10px", alignItems: "center" },
+  modeRow: { marginTop: "10px" },
+  modeTabs: { display: "flex", gap: "4px", marginTop: "5px" },
+  modeBtn: { flex: 1, padding: "6px 4px", borderRadius: "8px", border: `1.5px solid ${t.border}`, background: "#fff", fontSize: "11px", fontWeight: 600, color: t.textMuted, cursor: "pointer", textAlign: "center" },
+  modeBtnActive: { fontWeight: 700 },
   gpsBtn: { flex: 1, padding: "7px 10px", borderRadius: "9px", border: `1.5px solid ${t.border}`, background: "#fff", fontSize: "12px", fontWeight: 600, color: t.primary, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" },
   mapTypeTabs: { display: "flex", borderRadius: "9px", border: `1.5px solid ${t.border}`, overflow: "hidden" },
   mapTypeBtn: { padding: "7px 11px", border: "none", background: "#fff", fontSize: "16px", cursor: "pointer" },
