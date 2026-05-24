@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
@@ -11,6 +12,7 @@ const INTERESTS = ["Tarih & Kültür", "Doğa & Macera", "Yeme & İçme", "Alı�
 
 export default function AIRecommend() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [city, setCity] = useState("");
   const [customCity, setCustomCity] = useState("");
   const [duration, setDuration] = useState("2 gün");
@@ -23,6 +25,9 @@ export default function AIRecommend() {
   const [showHistory, setShowHistory] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [currentMeta, setCurrentMeta] = useState(null); // {city, duration, budget, interests}
+  const [aiPlaces, setAiPlaces] = useState([]);       // [{name}] AI'dan gelen mekan listesi
+  const [mapLoading, setMapLoading] = useState(false); // Geocoding yükleniyor
+  const [mapMsg, setMapMsg] = useState("");            // "8/10 mekan bulundu" gibi
 
   useEffect(() => {
     try {
@@ -49,6 +54,8 @@ export default function AIRecommend() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setResult(res.data.recommendation);
+      setAiPlaces(res.data.places || []);
+      setMapMsg("");
       setCurrentMeta({ city: finalCity, duration, budget, interests: selectedInterests });
     } catch (e) {
       const isQuota = e.response?.status === 429 || e.response?.data?.quota_exceeded;
@@ -60,6 +67,52 @@ export default function AIRecommend() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const showOnMap = async () => {
+    if (!aiPlaces.length) return;
+    setMapLoading(true);
+    setMapMsg("");
+    const finalCity = customCity.trim() || city;
+    const waypoints = [];
+
+    for (const place of aiPlaces) {
+      try {
+        const query = `${place.name}, ${finalCity}`;
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+          { headers: { "Accept-Language": "tr" } }
+        );
+        const data = await res.json();
+        if (data[0]) {
+          waypoints.push({
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            name: place.name,
+          });
+        }
+        // Nominatim rate limit — istekler arası 300ms bekle
+        await new Promise(r => setTimeout(r, 300));
+      } catch { /* bu mekanı atla */ }
+    }
+
+    setMapLoading(false);
+
+    if (waypoints.length === 0) {
+      setMapMsg("❌ Mekanlar haritada bulunamadı.");
+      return;
+    }
+
+    setMapMsg(`✅ ${waypoints.length}/${aiPlaces.length} mekan bulundu, haritaya aktarılıyor...`);
+
+    // MapPage'in "load_route" mekanizmasıyla uyumlu format
+    localStorage.setItem("load_route", JSON.stringify({
+      id: `ai-${Date.now()}`,
+      name: `AI Rotası: ${finalCity}`,
+      waypoints,
+    }));
+
+    setTimeout(() => navigate("/map"), 600);
   };
 
   const saveRecommendation = () => {
@@ -220,11 +273,21 @@ export default function AIRecommend() {
             <div style={s.resultHeader}>
               <span style={s.resultIcon}>✈️</span>
               <span style={s.resultTitle}>Gezi Planın Hazır!</span>
-              <div style={{marginLeft:"auto", display:"flex", alignItems:"center", gap:"8px"}}>
+              <div style={{marginLeft:"auto", display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap"}}>
                 {savedMsg && <span style={s.savedBadge}>✅ {savedMsg}</span>}
                 <button style={s.saveResultBtn} onClick={saveRecommendation}>💾 Kaydet</button>
+                {aiPlaces.length > 0 && (
+                  <button
+                    style={{...s.mapResultBtn, ...(mapLoading ? {opacity:0.7} : {})}}
+                    onClick={showOnMap}
+                    disabled={mapLoading}
+                  >
+                    {mapLoading ? "⏳ Yerler aranıyor..." : "🗺️ Haritada Göster"}
+                  </button>
+                )}
               </div>
             </div>
+            {mapMsg && <div style={s.mapMsgBar}>{mapMsg}</div>}
             <div style={s.resultBody}>
               {result.split("\n").map((line, i) => (
                 <p key={i} style={{
@@ -292,5 +355,7 @@ const s = {
   loadHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #0f6e56", background:"#e6f7f0", color:"#0f6e56", fontSize:"10px", fontWeight:600, cursor:"pointer" },
   delHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #fecaca", background:"transparent", color:"#EF4444", fontSize:"10px", cursor:"pointer" },
   saveResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.2)", color:"#fff", fontSize:"12px", fontWeight:600, cursor:"pointer", backdropFilter:"blur(4px)" },
+  mapResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.9)", color:"#0f6e56", fontSize:"12px", fontWeight:700, cursor:"pointer" },
+  mapMsgBar: { padding:"8px 1.5rem", fontSize:"12px", fontWeight:500, color:"#0f6e56", background:"#e6f7f0", borderBottom:"1px solid #a8d4bc" },
   savedBadge: { fontSize:"12px", color:"#d1fae5", fontWeight:500 },
 };

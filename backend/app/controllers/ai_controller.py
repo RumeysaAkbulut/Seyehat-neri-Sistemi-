@@ -4,6 +4,7 @@ from google import genai
 from google.genai import errors as genai_errors
 import os
 import time
+import json as json_lib
 
 ai_bp = Blueprint('ai', __name__, url_prefix='/api/ai')
 
@@ -71,7 +72,14 @@ Lütfen şunları içeren bir rota planı oluştur:
 4. Yemek önerileri (kahvaltı, öğle, akşam)
 5. Toplam tahmini maliyet
 
-Yanıtı Türkçe olarak ver ve madde madde düzenli bir şekilde yaz."""
+Yanıtı Türkçe olarak ver ve madde madde düzenli bir şekilde yaz.
+
+Yanıt metnini bitirdikten sonra, aşağıdaki formatı kullanarak ziyaret edilecek somut mekanların adlarını listele.
+Şehir adını mekan adına dahil etme. Sadece gerçek, coğrafi olarak var olan yerleri ekle.
+
+---PLACES_JSON---
+{{"places": [{{"name": "Mekan 1"}}, {{"name": "Mekan 2"}}]}}
+---END_PLACES_JSON---"""
 
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
@@ -87,7 +95,24 @@ Yanıtı Türkçe olarak ver ve madde madde düzenli bir şekilde yaz."""
                 'quota_exceeded': True,
             }), 429
 
-        return jsonify({'recommendation': text, 'model': model_used}), 200
+        # Mekan listesini JSON bloğundan ayır
+        recommendation_text = text
+        places = []
+        if '---PLACES_JSON---' in text and '---END_PLACES_JSON---' in text:
+            try:
+                rec_part, rest = text.split('---PLACES_JSON---', 1)
+                json_str, _ = rest.split('---END_PLACES_JSON---', 1)
+                recommendation_text = rec_part.strip()
+                places = json_lib.loads(json_str.strip()).get('places', [])
+            except Exception:
+                recommendation_text = text
+                places = []
+
+        return jsonify({
+            'recommendation': recommendation_text,
+            'places': places,
+            'model': model_used,
+        }), 200
 
     except genai_errors.ClientError as e:
         if _is_quota_error(e):
