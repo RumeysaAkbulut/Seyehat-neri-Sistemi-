@@ -133,12 +133,34 @@ export default function AIRecommend() {
             <label style={s.label}>Şehir Seç</label>
             <div style={s.cityGrid}>
               {CITIES.map(c => (
-                <button key={c} style={{...s.cityChip, ...(city === c && !customCity ? s.chipActive : {})}} onClick={() => { setCity(c); setCustomCity(""); }}>
+                <button
+                  key={c}
+                  style={{
+                    ...s.cityChip,
+                    ...(city === c && !customCity.trim() ? s.chipActive : {}),
+                    ...(customCity.trim() ? s.chipDimmed : {}),
+                  }}
+                  onClick={() => { setCity(c); setCustomCity(""); }}
+                >
                   {c}
                 </button>
               ))}
             </div>
-            <input style={s.input} placeholder="Veya başka bir şehir yaz..." value={customCity} onChange={e => { setCustomCity(e.target.value); setCity(""); }} />
+            <div style={s.customCityRow}>
+              <input
+                style={{ ...s.input, ...(customCity.trim() ? s.inputActive : {}) }}
+                placeholder="Veya başka bir şehir yaz... (Enter ile onayla)"
+                value={customCity}
+                onChange={e => { setCustomCity(e.target.value); if (e.target.value.trim()) setCity(""); }}
+                onKeyDown={e => { if (e.key === "Enter" && customCity.trim()) handleSubmit(); }}
+              />
+              {customCity.trim() && (
+                <button style={s.clearCityBtn} onClick={() => setCustomCity("")} title="Temizle">✕</button>
+              )}
+            </div>
+            {customCity.trim() && (
+              <div style={s.citySelectedBadge}>✅ Seçili şehir: <strong>{customCity.trim()}</strong></div>
+            )}
           </div>
 
           <div style={s.field}>
@@ -238,7 +260,12 @@ const s = {
   row: { display:"flex", flexWrap:"wrap", gap:"6px" },
   optBtn: { padding:"7px 14px", borderRadius:"8px", border:"1px solid #a8d4bc", background:"#fff", fontSize:"12px", color:"#4a7a62", cursor:"pointer" },
   chipActive: { background:"#0f6e56", color:"#fff", borderColor:"#0f6e56" },
-  input: { padding:"9px 12px", borderRadius:"10px", border:"1px solid #a8d4bc", fontSize:"13px", outline:"none", background:"#f5faf7" },
+  input: { padding:"9px 12px", borderRadius:"10px", border:"1px solid #a8d4bc", fontSize:"13px", outline:"none", background:"#f5faf7", flex:1 },
+  inputActive: { border:"2px solid #0f6e56", background:"#f0fdf8", fontWeight:600, color:"#1a2e25" },
+  customCityRow: { display:"flex", alignItems:"center", gap:"6px" },
+  clearCityBtn: { padding:"8px 10px", borderRadius:"9px", border:"1px solid #d0e8dc", background:"#fff", color:"#4a7a62", fontSize:"14px", cursor:"pointer", lineHeight:1, flexShrink:0 },
+  citySelectedBadge: { fontSize:"12px", color:"#0f6e56", background:"#e6f7f0", padding:"5px 10px", borderRadius:"8px", border:"1px solid #a8d4bc" },
+  chipDimmed: { opacity:0.4 },
   error: { padding:"10px 14px", borderRadius:"10px", background:"#fef2f2", border:"1px solid #fca5a5", color:"#dc2626", fontSize:"13px" },
   submitBtn: { padding:"13px", borderRadius:"12px", border:"none", background:"linear-gradient(135deg,#0f6e56,#1d9e75)", color:"#fff", fontSize:"14px", fontWeight:600, cursor:"pointer" },
   submitDisabled: { opacity:0.6, cursor:"not-allowed" },
