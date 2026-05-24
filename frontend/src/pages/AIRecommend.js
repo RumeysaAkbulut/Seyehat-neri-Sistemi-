@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+
+const HISTORY_KEY = "ai_recommendation_history";
 
 const CITIES = ["İstanbul", "Ankara", "İzmir", "Antalya", "Kapadokya", "Pamukkale", "Bursa", "Trabzon", "Bodrum", "Mardin"];
 const DURATIONS = ["1 gün", "2 gün", "3 gün", "1 hafta"];
@@ -17,6 +19,17 @@ export default function AIRecommend() {
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
+  const [currentMeta, setCurrentMeta] = useState(null); // {city, duration, budget, interests}
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      setHistory(stored);
+    } catch { setHistory([]); }
+  }, []);
 
   const toggleInterest = (i) => {
     setSelectedInterests(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
@@ -27,6 +40,7 @@ export default function AIRecommend() {
     if (!finalCity) { setError("Lütfen bir şehir seçin veya girin."); return; }
     setError("");
     setResult("");
+    setSavedMsg("");
     setLoading(true);
     try {
       const res = await axios.post(
@@ -35,21 +49,84 @@ export default function AIRecommend() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setResult(res.data.recommendation);
+      setCurrentMeta({ city: finalCity, duration, budget, interests: selectedInterests });
     } catch (e) {
-      setError(e.response?.data?.error || "AI servisi şu an kullanılamıyor.");
+      const isQuota = e.response?.status === 429 || e.response?.data?.quota_exceeded;
+      setError(
+        isQuota
+          ? "⚠️ Günlük AI kotası doldu. Birkaç dakika bekleyip tekrar dene veya yarın tekrar gel."
+          : (e.response?.data?.error || "AI servisi şu an kullanılamıyor.")
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveRecommendation = () => {
+    if (!result || !currentMeta) return;
+    const entry = {
+      id: Date.now(),
+      ...currentMeta,
+      content: result,
+      savedAt: new Date().toISOString(),
+    };
+    const updated = [entry, ...history].slice(0, 20); // max 20 kayıt
+    setHistory(updated);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    setSavedMsg("Öneri kaydedildi!");
+    setTimeout(() => setSavedMsg(""), 2500);
+  };
+
+  const loadHistoryItem = (item) => {
+    setResult(item.content);
+    setCurrentMeta({ city: item.city, duration: item.duration, budget: item.budget, interests: item.interests });
+    setCity(item.city);
+    setDuration(item.duration);
+    setBudget(item.budget);
+    setSelectedInterests(item.interests || []);
+    setShowHistory(false);
+  };
+
+  const deleteHistoryItem = (id) => {
+    const updated = history.filter(h => h.id !== id);
+    setHistory(updated);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   };
 
   return (
     <div style={s.page}>
       <div style={s.left}>
         <div style={s.header}>
-          <div style={s.icon}>✨</div>
+          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+            <div style={s.icon}>✨</div>
+            {history.length > 0 && (
+              <button style={s.historyToggleBtn} onClick={() => setShowHistory(v => !v)}>
+                📜 Geçmiş ({history.length})
+              </button>
+            )}
+          </div>
           <h1 style={s.title}>AI Rota Önerisi</h1>
           <p style={s.sub}>Yapay zeka ile sana özel kişiselleştirilmiş gezi planı al.</p>
         </div>
+
+        {/* Geçmiş Paneli */}
+        {showHistory && (
+          <div style={s.historyPanel}>
+            <div style={s.historyTitle}>Geçmiş Öneriler</div>
+            {history.map(item => (
+              <div key={item.id} style={s.historyItem}>
+                <div style={s.historyItemInfo}>
+                  <div style={s.historyCity}>📍 {item.city}</div>
+                  <div style={s.historyMeta}>{item.duration} · {item.budget} bütçe · {new Date(item.savedAt).toLocaleDateString("tr-TR")}</div>
+                </div>
+                <div style={s.historyBtns}>
+                  <button style={s.loadHistBtn} onClick={() => loadHistoryItem(item)}>↩ Yükle</button>
+                  <button style={s.delHistBtn} onClick={() => deleteHistoryItem(item.id)}>🗑️</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={s.form}>
           <div style={s.field}>
@@ -121,6 +198,10 @@ export default function AIRecommend() {
             <div style={s.resultHeader}>
               <span style={s.resultIcon}>✈️</span>
               <span style={s.resultTitle}>Gezi Planın Hazır!</span>
+              <div style={{marginLeft:"auto", display:"flex", alignItems:"center", gap:"8px"}}>
+                {savedMsg && <span style={s.savedBadge}>✅ {savedMsg}</span>}
+                <button style={s.saveResultBtn} onClick={saveRecommendation}>💾 Kaydet</button>
+              </div>
             </div>
             <div style={s.resultBody}>
               {result.split("\n").map((line, i) => (
@@ -173,4 +254,16 @@ const s = {
   numbered: { fontWeight:500, color:"#0f6e56" },
   heading: { fontSize:"15px", fontWeight:700, color:"#1a2e25", marginTop:"12px" },
   bold: { fontWeight:600 },
+  historyToggleBtn: { padding:"6px 12px", borderRadius:"8px", border:"1px solid #a8d4bc", background:"#fff", fontSize:"12px", fontWeight:600, color:"#0f6e56", cursor:"pointer" },
+  historyPanel: { background:"#f5faf7", borderRadius:"12px", border:"1px solid #d0e8dc", padding:"0.75rem", marginBottom:"1rem", display:"flex", flexDirection:"column", gap:"6px" },
+  historyTitle: { fontSize:"11px", fontWeight:700, color:"#4a7a62", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"4px" },
+  historyItem: { background:"#fff", borderRadius:"8px", border:"1px solid #e8f5ee", padding:"8px 10px", display:"flex", alignItems:"center", gap:"8px" },
+  historyItemInfo: { flex:1, overflow:"hidden" },
+  historyCity: { fontSize:"12px", fontWeight:700, color:"#1a2e25" },
+  historyMeta: { fontSize:"11px", color:"#4a7a62", marginTop:"2px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" },
+  historyBtns: { display:"flex", gap:"4px", flexShrink:0 },
+  loadHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #0f6e56", background:"#e6f7f0", color:"#0f6e56", fontSize:"10px", fontWeight:600, cursor:"pointer" },
+  delHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #fecaca", background:"transparent", color:"#EF4444", fontSize:"10px", cursor:"pointer" },
+  saveResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.2)", color:"#fff", fontSize:"12px", fontWeight:600, cursor:"pointer", backdropFilter:"blur(4px)" },
+  savedBadge: { fontSize:"12px", color:"#d1fae5", fontWeight:500 },
 };

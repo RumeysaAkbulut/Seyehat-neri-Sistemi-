@@ -1,9 +1,48 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from google import genai
+from google.genai import errors as genai_errors
 import os
+import time
 
 ai_bp = Blueprint('ai', __name__, url_prefix='/api/ai')
+
+# Öncelik sırası: daha hafif modeller daha yüksek kotaya sahip olabilir
+FALLBACK_MODELS = [
+    'gemini-2.0-flash',        # Ana model
+    'gemini-2.0-flash-lite',   # Daha hafif, ayrı kota
+    'gemini-2.5-flash-lite',   # Daha yeni lite
+    'gemini-2.5-flash',        # En yeni flash
+]
+
+def _is_quota_error(e):
+    """429 veya RESOURCE_EXHAUSTED hatası mı kontrol eder."""
+    code = getattr(e, 'code', None)
+    status = getattr(e, 'status', None)
+    return (
+        code == 429
+        or status == 'RESOURCE_EXHAUSTED'
+        or '429' in str(e)
+        or 'RESOURCE_EXHAUSTED' in str(e)
+        or 'quota' in str(e).lower()
+    )
+
+def _try_generate(client, prompt):
+    """Modelleri sırayla dener; kota aşılırsa sonrakine geçer. (text, model_used, error) döner."""
+    last_error = None
+    for model in FALLBACK_MODELS:
+        try:
+            response = client.models.generate_content(model=model, contents=prompt)
+            return response.text, model, None
+        except genai_errors.ClientError as e:
+            if _is_quota_error(e):
+                last_error = e
+                time.sleep(1)
+                continue
+            raise
+        except Exception as e:
+            raise
+    return None, None, last_error
 
 @ai_bp.route('/recommend', methods=['POST'])
 @jwt_required()
@@ -11,11 +50,11 @@ def recommend():
     data = request.get_json()
     city = data.get('city', '')
     interests = data.get('interests', '')
-    duration = data.get('duration', '1 gun')
+    duration = data.get('duration', '1 gün')
     budget = data.get('budget', 'orta')
 
     if not city:
-        return jsonify({'error': 'Sehir bilgisi gerekli'}), 400
+        return jsonify({'error': 'Şehir bilgisi gerekli'}), 400
 
     prompt = f"""Sen bir seyahat uzmanısın. Kullanıcıya {city} şehri için kişiselleştirilmiş bir gezi rotası öner.
 
@@ -34,18 +73,28 @@ Lütfen şunları içeren bir rota planı oluştur:
 
 Yanıtı Türkçe olarak ver ve madde madde düzenli bir şekilde yaz."""
 
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'AI servisi yapılandırılmamış. GEMINI_API_KEY eksik.'}), 503
+
     try:
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            return jsonify({'error': 'AI servisi yapılandırılmamış. GEMINI_API_KEY gerekli.'}), 503
-
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt
-        )
-        recommendation = response.text
-        return jsonify({'recommendation': recommendation}), 200
+        text, model_used, quota_err = _try_generate(client, prompt)
 
+        if quota_err is not None:
+            return jsonify({
+                'error': 'Günlük Gemini API kotası doldu. Lütfen birkaç dakika sonra tekrar deneyin.',
+                'quota_exceeded': True,
+            }), 429
+
+        return jsonify({'recommendation': text, 'model': model_used}), 200
+
+    except genai_errors.ClientError as e:
+        if _is_quota_error(e):
+            return jsonify({
+                'error': 'Günlük Gemini API kotası doldu. Lütfen birkaç dakika sonra tekrar deneyin.',
+                'quota_exceeded': True,
+            }), 429
+        return jsonify({'error': f'AI istek hatası: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': f'AI servisi hatasi: {str(e)}'}), 500
+        return jsonify({'error': f'AI servisi şu an kullanılamıyor: {str(e)}'}), 500
