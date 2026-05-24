@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
@@ -14,16 +14,41 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
+async function fetchOSRMRoute(waypoints) {
+  if (waypoints.length < 2) return null;
+  try {
+    const coords = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
+    );
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes?.[0]) return null;
+    return data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+  } catch { return null; }
+}
+
 export default function SharedRoute() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [route, setRoute] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [routeGeometry, setRouteGeometry] = useState([]);
 
   useEffect(() => {
     axios.get(`http://localhost:5001/api/share/route/${token}`)
-      .then(r => { setRoute(r.data.route); setLoading(false); })
+      .then(async r => {
+        const routeData = r.data.route;
+        setRoute(routeData);
+        setLoading(false);
+        // OSRM ile gerçek yol geometrisi çek
+        const wps = (routeData.waypoints || []).filter(wp => wp.lat && wp.lng);
+        if (wps.length >= 2) {
+          const geometry = await fetchOSRMRoute(wps);
+          if (geometry) setRouteGeometry(geometry);
+          else setRouteGeometry(wps.map(wp => [wp.lat, wp.lng]));
+        }
+      })
       .catch(() => { setError("Rota bulunamadı veya paylaşım linki geçersiz."); setLoading(false); });
   }, [token]);
 
@@ -108,8 +133,11 @@ export default function SharedRoute() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; OpenStreetMap'
                 />
-                {polyline.length > 1 && (
-                  <Polyline positions={polyline} color={t.primary} weight={3} opacity={0.8} />
+                {routeGeometry.length > 1 && (
+                  <Polyline positions={routeGeometry} color={t.primary} weight={4} opacity={0.85} />
+                )}
+                {routeGeometry.length < 2 && polyline.length > 1 && (
+                  <Polyline positions={polyline} color={t.primary} weight={2} dashArray="8,8" opacity={0.4} />
                 )}
                 {waypoints.filter(wp => wp.lat && wp.lng).map((wp, i) => (
                   <Marker key={i} position={[wp.lat, wp.lng]}>

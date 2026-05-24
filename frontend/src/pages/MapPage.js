@@ -6,6 +6,21 @@ import "leaflet/dist/leaflet.css";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
 
+// OSRM public demo — API key gerekmez, gerçek yol geometrisi döner
+async function fetchOSRMRoute(waypoints) {
+  if (waypoints.length < 2) return null;
+  try {
+    const coords = waypoints.map(wp => `${wp.lon},${wp.lat}`).join(';');
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
+    );
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes?.[0]) return null;
+    // OSRM [lon, lat] döndürür → Leaflet [lat, lon] ister
+    return data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+  } catch { return null; }
+}
+
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -167,8 +182,11 @@ export default function MapPage() {
   const [mapType, setMapType] = useState("street"); // "street" | "satellite"
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsMarker, setGpsMarker] = useState(null);
+  const [routeGeometry, setRouteGeometry] = useState([]); // OSRM'den gelen gerçek yol koordinatları
+  const [routingLoading, setRoutingLoading] = useState(false);
   const pinCountRef = useRef(0);
   const debounceRef = useRef(null);
+  const routingTimerRef = useRef(null);
 
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -198,6 +216,24 @@ export default function MapPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Route waypoint'leri değişince OSRM'den gerçek yol geometrisini çek
+  useEffect(() => {
+    if (route.length < 2) {
+      setRouteGeometry([]);
+      setRoutingLoading(false);
+      return;
+    }
+    if (routingTimerRef.current) clearTimeout(routingTimerRef.current);
+    setRoutingLoading(true);
+    routingTimerRef.current = setTimeout(async () => {
+      const geometry = await fetchOSRMRoute(route);
+      // OSRM başarısız olursa düz çizgiye fallback
+      setRouteGeometry(geometry || route.map(p => [p.lat, p.lon]));
+      setRoutingLoading(false);
+    }, 600); // Kullanıcı hızlı ekliyorsa debounce ile tek istek
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route]);
 
   const saveCurrentRoute = async () => {
     if (!routeName.trim()) { setSaveError("Rota adı zorunludur."); return; }
@@ -416,7 +452,11 @@ export default function MapPage() {
         {/* Rota Özeti */}
         {route.length > 0 && (
           <div style={s.section}>
-            <div style={s.sectionLabel}>Oluşturulan Rota ({route.length} nokta)</div>
+            <div style={s.sectionLabel}>
+              Oluşturulan Rota ({route.length} nokta)
+              {routingLoading && <span style={s.routingBadge}>⏳ Yol hesaplanıyor...</span>}
+              {!routingLoading && routeGeometry.length > 1 && <span style={s.routedBadge}>🛣️ Yol takip ediyor</span>}
+            </div>
             <div style={s.routeList}>
               {route.map((p, i) => (
                 <div key={p.id} style={s.routeItem}>
@@ -589,8 +629,13 @@ export default function MapPage() {
             </Marker>
           )}
 
-          {routeCoords.length > 1 && (
-            <Polyline positions={routeCoords} color={ROUTE_COLOR} weight={3} dashArray="8,5" />
+          {/* Gerçek yol geometrisi (OSRM) */}
+          {routeGeometry.length > 1 && (
+            <Polyline positions={routeGeometry} color={ROUTE_COLOR} weight={4} opacity={0.85} />
+          )}
+          {/* OSRM yüklenirken geçici kesik düz çizgi */}
+          {routingLoading && routeCoords.length > 1 && (
+            <Polyline positions={routeCoords} color={ROUTE_COLOR} weight={2} dashArray="8,8" opacity={0.35} />
           )}
         </MapContainer>
       </div>
@@ -658,5 +703,7 @@ const s = {
   mapTypeBtnActive: { background: t.primaryLight },
   legend: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" },
   legendLabel: { fontSize: "12px", color: t.textMuted },
+  routingBadge: { display: "inline-block", marginLeft: "6px", fontSize: "10px", color: "#D97706", background: "#FFFBEB", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 },
+  routedBadge: { display: "inline-block", marginLeft: "6px", fontSize: "10px", color: t.primary, background: t.primaryLight, padding: "2px 6px", borderRadius: "6px", fontWeight: 600 },
   mapWrap: { flex: 1, position: "relative" },
 };
