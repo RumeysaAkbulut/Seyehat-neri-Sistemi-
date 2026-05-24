@@ -63,25 +63,36 @@ async function fetchWikiImage(name) {
   } catch { return null; }
 }
 
-// Overpass API — şehir merkezinden 15 km içindeki popüler POI'ları çek
+// Overpass API — birden fazla sunucuyla fallback + timeout
+const OVERPASS_SERVERS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://lz4.overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
+
 async function fetchCityPlaces(lat, lon, radiusKm = 15) {
   const r = radiusKm * 1000;
-  const query = `
-    [out:json][timeout:20];
-    (
-      node["tourism"~"attraction|museum|viewpoint|gallery|artwork|theme_park|zoo|aquarium"](around:${r},${lat},${lon});
-      node["historic"~"monument|castle|archaeological_site|ruins|memorial|fort|palace"](around:${r},${lat},${lon});
-      node["leisure"~"park|nature_reserve|garden"](around:${r},${lat},${lon});
-      node["amenity"~"theatre|cinema|library|place_of_worship"](around:${r},${lat},${lon});
-    );
-    out body 40;
-  `;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    body: query,
-  });
-  const data = await res.json();
-  return (data.elements || []).filter(e => e.tags?.name);
+  const query = [
+    "[out:json][timeout:25];(",
+    `node["tourism"~"attraction|museum|viewpoint|gallery|artwork|theme_park|zoo|aquarium"](around:${r},${lat},${lon});`,
+    `node["historic"~"monument|castle|archaeological_site|ruins|memorial|fort|palace"](around:${r},${lat},${lon});`,
+    `node["leisure"~"park|nature_reserve|garden"](around:${r},${lat},${lon});`,
+    `node["amenity"~"theatre|cinema|library|place_of_worship"](around:${r},${lat},${lon});`,
+    ");out body 40;",
+  ].join("");
+
+  for (const server of OVERPASS_SERVERS) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000); // 15s per server
+      const res = await fetch(server, { method: "POST", body: query, signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const data = await res.json();
+      return (data.elements || []).filter(e => e.tags?.name);
+    } catch { continue; } // timeout veya ağ hatası → sonraki sunucu
+  }
+  return []; // tüm sunucular başarısız → boş dizi (hata fırlatma)
 }
 
 // Nominatim ile şehir merkezi koordinatı bul
@@ -334,17 +345,24 @@ export default function MapPage() {
     setCityError("");
     setPois([]);
     try {
+      // 1. Şehri geocode et (Nominatim)
       const city = await geocodeCity(query);
-      if (!city) { setCityError("Şehir bulunamadı."); setCityLoading(false); return; }
+      if (!city) { setCityError("Şehir bulunamadı. Farklı bir yazım dene."); setCityLoading(false); return; }
+
       const lat = parseFloat(city.lat);
       const lon = parseFloat(city.lon);
       setMapCenter([lat, lon]);
       setMapZoom(12);
+
+      // 2. POI'ları çek — başarısız olursa boş dizi döner, fırlatmaz
       const results = await fetchCityPlaces(lat, lon);
-      if (results.length === 0) { setCityError("Bu şehirde kayıtlı popüler mekan bulunamadı."); }
       setPois(results);
+      if (results.length === 0) {
+        setCityError("Harita şehre taşındı fakat popüler mekan verisi alınamadı. Haritayı kullanmaya devam edebilirsin.");
+      }
     } catch {
-      setCityError("Veri alınamadı. Tekrar dene.");
+      // Bu noktaya sadece geocode tamamen çökerse gelinir
+      setCityError("Şehir konumu alınamadı. İnternet bağlantını kontrol et.");
     } finally {
       setCityLoading(false);
     }
