@@ -76,11 +76,16 @@ Lütfen şunları içeren bir rota planı oluştur:
 Yanıtı Türkçe olarak ver ve madde madde düzenli bir şekilde yaz.
 
 Yanıt metnini bitirdikten sonra, aşağıdaki formatı kullanarak ziyaret edilecek somut mekanların listesini ekle.
-Şehir adını mekan adına dahil etme. Sadece gerçek, coğrafi olarak var olan yerleri ekle.
-"duration" alanına o mekanda harcanacak tahmini süreyi yaz (örn. "1 saat", "45 dk", "2 saat").
+
+KRİTİK KURALLAR (kesinlikle uy):
+- "name" alanına mekanın OpenStreetMap/Nominatim'de aranabilecek ORIJINAL YEREL ADINI yaz (Türkçe çeviri değil).
+  Örnekler: "Alcázar de Sevilla", "Sagrada Família", "Topkapı Sarayı", "Eiffel Tower", "Colosseum"
+- Şehir adını mekan adına dahil ETME.
+- Sadece gerçek, haritada var olan coğrafi yerleri ekle (restoranlar, kafeler dahil edilmesin).
+- "duration" alanına o mekanda harcanacak tahmini süreyi yaz (örn. "1 saat", "45 dk", "2 saat").
 
 ---PLACES_JSON---
-{{"places": [{{"name": "Mekan 1", "duration": "1.5 saat"}}, {{"name": "Mekan 2", "duration": "45 dk"}}]}}
+{{"places": [{{"name": "Orijinal Mekan Adı 1", "duration": "1.5 saat"}}, {{"name": "Orijinal Mekan Adı 2", "duration": "45 dk"}}]}}
 ---END_PLACES_JSON---"""
 
     api_key = os.getenv('GEMINI_API_KEY')

@@ -193,8 +193,8 @@ export default function Routes() {
 }
 
 const s = {
-  page: { minHeight: "calc(100vh - 58px)", background: "#f2f8f5", fontFamily: "system-ui,sans-serif", padding: "2rem" },
-  center: { minHeight: "calc(100vh - 58px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", fontFamily: "system-ui,sans-serif" },
+  page: { fontFamily: "system-ui,sans-serif", padding: "2rem" },
+  center: { minHeight: "300px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", fontFamily: "system-ui,sans-serif" },
   muted: { fontSize: "15px", color: "#4a7a62" },
 
   header: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: "12px" },

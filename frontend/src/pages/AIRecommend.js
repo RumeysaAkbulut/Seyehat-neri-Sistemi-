@@ -5,8 +5,25 @@ import { useAuth } from "../context/AuthContext";
 
 const HISTORY_KEY = "ai_recommendation_history";
 
+/** Nearest-neighbour: ilk nokta sabit, geri kalanları en yakın komşuya göre sıralar. */
+function nearestNeighbourSort(points) {
+  if (points.length <= 2) return [...points];
+  const rem = [...points];
+  const out = [rem.shift()];
+  while (rem.length > 0) {
+    const last = out[out.length - 1];
+    let bi = 0, bd = Infinity;
+    for (let i = 0; i < rem.length; i++) {
+      const d = (last.lat - rem[i].lat) ** 2 + (last.lng - rem[i].lng) ** 2;
+      if (d < bd) { bd = d; bi = i; }
+    }
+    out.push(rem.splice(bi, 1)[0]);
+  }
+  return out;
+}
+
 const CITIES = ["İstanbul", "Ankara", "İzmir", "Antalya", "Kapadokya", "Pamukkale", "Bursa", "Trabzon", "Bodrum", "Mardin"];
-const DURATIONS = ["1 gün", "2 gün", "3 gün", "1 hafta"];
+const DURATION_PRESETS = ["1 gün", "2 gün", "3 gün", "5 gün", "1 hafta", "2 hafta"];
 const BUDGETS = ["düşük", "orta", "yüksek"];
 const INTERESTS = ["Tarih & Kültür", "Doğa & Macera", "Yeme & İçme", "Alışveriş", "Sanat & Müze", "Gece Hayatı"];
 
@@ -16,6 +33,8 @@ export default function AIRecommend() {
   const [city, setCity] = useState("");
   const [customCity, setCustomCity] = useState("");
   const [duration, setDuration] = useState("2 gün");
+  const [durationNum, setDurationNum] = useState(2);
+  const [durationUnit, setDurationUnit] = useState("gün"); // "gün" | "hafta"
   const [budget, setBudget] = useState("orta");
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [result, setResult] = useState("");
@@ -35,6 +54,31 @@ export default function AIRecommend() {
       setHistory(stored);
     } catch { setHistory([]); }
   }, []);
+
+  // Preset seçilince stepper'ı da senkronize et
+  const pickPreset = (preset) => {
+    setDuration(preset);
+    const parts = preset.split(" ");
+    setDurationNum(parseInt(parts[0], 10));
+    setDurationUnit(parts[1]);
+  };
+
+  // Stepper ± → duration string üret
+  const stepDuration = (delta) => {
+    const maxVal = durationUnit === "hafta" ? 8 : 30;
+    const next = Math.min(maxVal, Math.max(1, durationNum + delta));
+    setDurationNum(next);
+    const str = `${next} ${durationUnit}`;
+    setDuration(str);
+  };
+
+  // Birim değişince miktar sıfırla mantıklı bir değere
+  const changeUnit = (unit) => {
+    setDurationUnit(unit);
+    const num = unit === "hafta" ? Math.min(durationNum, 8) : durationNum;
+    setDurationNum(num);
+    setDuration(`${num} ${unit}`);
+  };
 
   const toggleInterest = (i) => {
     setSelectedInterests(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
@@ -72,48 +116,115 @@ export default function AIRecommend() {
   const showOnMap = async () => {
     if (!aiPlaces.length) return;
     setMapLoading(true);
-    setMapMsg("");
+    setMapMsg("⏳ Şehir merkezi alınıyor...");
     const finalCity = customCity.trim() || city;
     const waypoints = [];
 
-    for (const place of aiPlaces) {
+    // ── 0. Şehir merkezini al (yakınlık filtresi için) ──
+    let cityLat = null, cityLon = null;
+    try {
+      const cr = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(finalCity)}&format=json&limit=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const cd = await cr.json();
+      if (cd[0]) { cityLat = parseFloat(cd[0].lat); cityLon = parseFloat(cd[0].lon); }
+    } catch { /* filtre atlanır */ }
+
+    // ~100 km yarıçap kontrolü (Öklid, derece cinsinden)
+    const RADIUS = 1.2;
+    const isNearCity = (lat, lon) =>
+      cityLat === null ? true
+      : Math.sqrt((lat - cityLat) ** 2 + (lon - cityLon) ** 2) < RADIUS;
+
+    // ── Photon geocoder (çok dilli, Türkçe dahil, ücretsiz, hız limiti yok) ──
+    const geocodePhoton = async (q) => {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const hit = (data.features || []).find(f => {
+        const [lon, lat] = f.geometry.coordinates;
+        return isNearCity(lat, lon);
+      });
+      if (!hit) return null;
+      const [lon, lat] = hit.geometry.coordinates;
+      return { lat, lon };
+    };
+
+    // ── Nominatim fallback (yavaş, 1100ms gecikme gerekli) ──
+    const geocodeNominatim = async (q) => {
+      await new Promise(r => setTimeout(r, 1100));
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`,
+        { headers: { "Accept-Language": "en,tr,es,fr,de,it,pt,ar" } }
+      );
+      const data = await res.json();
+      const hit = data.find(r => isNearCity(parseFloat(r.lat), parseFloat(r.lon)));
+      if (!hit) return null;
+      return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon) };
+    };
+
+    // ── Tek mekan için tüm stratejileri sırayla dene ──
+    const findPlace = async (name) => {
+      const clean = name.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+
+      // Photon stratejileri (hızlı, çok dilli)
+      const photonQueries = [
+        `${clean} ${finalCity}`,   // "Alcázar Sevilla" — boşlukla
+        `${clean}, ${finalCity}`,  // "Alcázar, Sevilla" — virgülle
+        clean,                     // sadece mekan adı
+        name,                      // AI'ın tam verdiği ad
+      ];
+      for (const q of photonQueries) {
+        try {
+          const r = await geocodePhoton(q);
+          if (r) return r;
+        } catch { /* devam */ }
+      }
+
+      // Nominatim fallback stratejileri
+      const nomQueries = [
+        `${clean}, ${finalCity}`,
+        clean,
+      ];
+      for (const q of nomQueries) {
+        try {
+          const r = await geocodeNominatim(q);
+          if (r) return r;
+        } catch { /* devam */ }
+      }
+      return null;
+    };
+
+    // ── 1. Her mekan için ara ──
+    for (let i = 0; i < aiPlaces.length; i++) {
+      const place = aiPlaces[i];
+      setMapMsg(`⏳ ${i + 1}/${aiPlaces.length}: "${place.name}" aranıyor...`);
       try {
-        const query = `${place.name}, ${finalCity}`;
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-          { headers: { "Accept-Language": "tr" } }
-        );
-        const data = await res.json();
-        if (data[0]) {
-          waypoints.push({
-            lat: parseFloat(data[0].lat),
-            lng: parseFloat(data[0].lon),
-            name: place.name,
-            duration: place.duration || null,
-          });
+        const coords = await findPlace(place.name);
+        if (coords) {
+          waypoints.push({ lat: coords.lat, lng: coords.lon, name: place.name, duration: place.duration || null });
         }
-        // Nominatim rate limit — istekler arası 300ms bekle
-        await new Promise(r => setTimeout(r, 300));
       } catch { /* bu mekanı atla */ }
     }
 
     setMapLoading(false);
 
     if (waypoints.length === 0) {
-      setMapMsg("❌ Mekanlar haritada bulunamadı.");
+      setMapMsg("❌ Hiçbir mekan konumlandırılamadı. Lütfen birkaç dakika bekleyip tekrar deneyin.");
       return;
     }
 
-    setMapMsg(`✅ ${waypoints.length}/${aiPlaces.length} mekan bulundu, haritaya aktarılıyor...`);
+    const optimized = nearestNeighbourSort(waypoints);
+    setMapMsg(`✅ ${optimized.length}/${aiPlaces.length} mekan bulundu — optimize edildi, haritaya aktarılıyor...`);
 
-    // MapPage'in "load_route" mekanizmasıyla uyumlu format
     localStorage.setItem("load_route", JSON.stringify({
       id: `ai-${Date.now()}`,
       name: `AI Rotası: ${finalCity}`,
-      waypoints,
+      waypoints: optimized,
     }));
 
-    setTimeout(() => navigate("/map"), 600);
+    setTimeout(() => navigate("/map"), 800);
   };
 
   const saveRecommendation = () => {
@@ -219,10 +330,37 @@ export default function AIRecommend() {
 
           <div style={s.field}>
             <label style={s.label}>Süre</label>
+
+            {/* Hızlı presetler */}
             <div style={s.row}>
-              {DURATIONS.map(d => (
-                <button key={d} style={{...s.optBtn, ...(duration === d ? s.chipActive : {})}} onClick={() => setDuration(d)}>{d}</button>
+              {DURATION_PRESETS.map(d => (
+                <button
+                  key={d}
+                  style={{...s.optBtn, ...(duration === d ? s.chipActive : {})}}
+                  onClick={() => pickPreset(d)}
+                >
+                  {d}
+                </button>
               ))}
+            </div>
+
+            {/* Özel süre: stepper + birim */}
+            <div style={s.stepperRow}>
+              <span style={s.stepperLabel}>Özel:</span>
+              <button style={s.stepperBtn} onClick={() => stepDuration(-1)} disabled={durationNum <= 1}>−</button>
+              <span style={s.stepperVal}>{durationNum}</span>
+              <button style={s.stepperBtn} onClick={() => stepDuration(1)} disabled={durationNum >= (durationUnit === "hafta" ? 8 : 30)}>+</button>
+              <div style={s.unitToggle}>
+                <button
+                  style={{...s.unitBtn, ...(durationUnit === "gün" ? s.unitBtnActive : {})}}
+                  onClick={() => changeUnit("gün")}
+                >gün</button>
+                <button
+                  style={{...s.unitBtn, ...(durationUnit === "hafta" ? s.unitBtnActive : {})}}
+                  onClick={() => changeUnit("hafta")}
+                >hafta</button>
+              </div>
+              <span style={s.stepperCurrent}>→ <strong>{duration}</strong></span>
             </div>
           </div>
 
@@ -330,6 +468,15 @@ const s = {
   clearCityBtn: { padding:"8px 10px", borderRadius:"9px", border:"1px solid #d0e8dc", background:"#fff", color:"#4a7a62", fontSize:"14px", cursor:"pointer", lineHeight:1, flexShrink:0 },
   citySelectedBadge: { fontSize:"12px", color:"#0f6e56", background:"#e6f7f0", padding:"5px 10px", borderRadius:"8px", border:"1px solid #a8d4bc" },
   chipDimmed: { opacity:0.4 },
+
+  stepperRow: { display:"flex", alignItems:"center", gap:"6px", background:"#f5faf7", borderRadius:"10px", padding:"8px 12px", border:"1px solid #d0e8dc", flexWrap:"wrap" },
+  stepperLabel: { fontSize:"11px", fontWeight:600, color:"#4a7a62", textTransform:"uppercase", letterSpacing:"0.4px", marginRight:"4px" },
+  stepperBtn: { width:"28px", height:"28px", borderRadius:"7px", border:"1px solid #a8d4bc", background:"#fff", color:"#0f6e56", fontSize:"16px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 },
+  stepperVal: { minWidth:"24px", textAlign:"center", fontSize:"16px", fontWeight:700, color:"#1a2e25" },
+  unitToggle: { display:"flex", borderRadius:"7px", overflow:"hidden", border:"1px solid #a8d4bc" },
+  unitBtn: { padding:"5px 10px", border:"none", background:"#fff", fontSize:"12px", fontWeight:600, color:"#4a7a62", cursor:"pointer" },
+  unitBtnActive: { background:"#0f6e56", color:"#fff" },
+  stepperCurrent: { fontSize:"12px", color:"#0f6e56", marginLeft:"4px" },
   error: { padding:"10px 14px", borderRadius:"10px", background:"#fef2f2", border:"1px solid #fca5a5", color:"#dc2626", fontSize:"13px" },
   submitBtn: { padding:"13px", borderRadius:"12px", border:"none", background:"linear-gradient(135deg,#0f6e56,#1d9e75)", color:"#fff", fontSize:"14px", fontWeight:600, cursor:"pointer" },
   submitDisabled: { opacity:0.6, cursor:"not-allowed" },

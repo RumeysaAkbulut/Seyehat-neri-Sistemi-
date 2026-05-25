@@ -53,24 +53,32 @@ export default function PlaceDetail() {
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
   const numId = parseInt(id);
 
+  // Sample mekan ID'leri (backend'deki ID'lerle çakışmasın diye ayrı tutulur)
+  const SAMPLE_IDS = new Set(SAMPLE_PLACES.map(p => p.id));
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      // Önce sample data'da ara
-      const sample = SAMPLE_PLACES.find(p => p.id === numId);
-      if (sample) {
+
+      const isSample = SAMPLE_IDS.has(numId);
+      const sample = isSample ? SAMPLE_PLACES.find(p => p.id === numId) : null;
+
+      if (isSample) {
+        // Sample mekan: hardcoded veriyi kullan, backend'den üzerine yazma
         setPlace(sample);
         setLoading(false);
+      } else {
+        // DB mekanı: backend'den çek
+        try {
+          const res = await axios.get(`http://localhost:5001/api/places/${id}`, authHeader);
+          setPlace(res.data.place);
+        } catch {
+          setPlace(null);
+        } finally {
+          setLoading(false);
+        }
       }
-      // Backend'den çek (hem sample hem DB için)
-      try {
-        const res = await axios.get(`http://localhost:5001/api/places/${id}`, authHeader);
-        setPlace(res.data.place);
-      } catch {
-        if (!sample) setPlace(null);
-      } finally {
-        setLoading(false);
-      }
+
       // Favori durumu
       try {
         const favRes = await axios.get("http://localhost:5001/api/favorites/", authHeader);

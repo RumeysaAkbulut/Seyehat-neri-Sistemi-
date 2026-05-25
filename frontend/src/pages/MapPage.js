@@ -95,6 +95,36 @@ async function fetchCityPlaces(lat, lon, radiusKm = 15) {
   return []; // tüm sunucular başarısız → boş dizi (hata fırlatma)
 }
 
+/**
+ * Nearest-neighbour TSP heuristic.
+ * Waypoint'leri birbirine en yakın sırayla dizer.
+ * İlk nokta sabit kalır, geriye kalanlar greedy olarak seçilir.
+ * @param {Array<{lat, lon, ...}>} points
+ * @returns {Array} – aynı nesneler, yeni sırada
+ */
+function nearestNeighbourSort(points) {
+  if (points.length <= 2) return [...points];
+  const remaining = [...points];
+  const sorted = [remaining.shift()]; // ilk nokta sabit
+
+  while (remaining.length > 0) {
+    const last = sorted[sorted.length - 1];
+    let bestIdx = 0;
+    let bestDist = Infinity;
+
+    for (let i = 0; i < remaining.length; i++) {
+      // Haversine yerine Öklid yeterli (küçük mesafeler için)
+      const dLat = last.lat - remaining[i].lat;
+      const dLon = last.lon - remaining[i].lon;
+      const dist = dLat * dLat + dLon * dLon; // karesi yeterli — sqrt gerekmez
+      if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+    }
+
+    sorted.push(remaining.splice(bestIdx, 1)[0]);
+  }
+  return sorted;
+}
+
 // Nominatim ile şehir merkezi koordinatı bul
 async function geocodeCity(cityName) {
   const res = await fetch(
@@ -541,6 +571,19 @@ export default function MapPage() {
               <button style={s.saveRouteBtn} onClick={() => { setRouteName(""); setSaveError(""); setShowSaveModal(true); }}>
                 💾 Kaydet
               </button>
+              {route.length >= 3 && (
+                <button
+                  style={s.optimizeBtn}
+                  title="Birbirine en yakın noktaları sırayla gez (nearest-neighbour)"
+                  onClick={() => {
+                    setRoute(prev => nearestNeighbourSort(prev));
+                    setSuccessMsg("Rota optimize edildi! 🔀");
+                    setTimeout(() => setSuccessMsg(""), 2500);
+                  }}
+                >
+                  🔀 Optimize
+                </button>
+              )}
               <button style={s.clearBtn} onClick={() => setRoute([])}>🗑️ Temizle</button>
             </div>
           </div>
@@ -772,6 +815,7 @@ const s = {
   removeBtn: { background: "none", border: "none", color: "#EF4444", fontSize: "15px", cursor: "pointer", lineHeight: 1 },
   routeActions: { display: "flex", gap: "6px", marginTop: "4px" },
   saveRouteBtn: { flex: 1, padding: "6px", borderRadius: "8px", border: "none", background: t.gradient, color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer" },
+  optimizeBtn: { flex: 1, padding: "6px", borderRadius: "8px", border: "1px solid #7C3AED", background: "#F5F3FF", color: "#7C3AED", fontSize: "11px", fontWeight: 600, cursor: "pointer" },
   clearBtn: { flex: 1, padding: "6px", borderRadius: "8px", border: "1px solid #FECACA", background: "transparent", color: "#EF4444", fontSize: "11px", cursor: "pointer" },
   savedList: { display: "flex", flexDirection: "column", gap: "6px" },
   savedItem: { padding: "8px 10px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "#FAFAFA" },
