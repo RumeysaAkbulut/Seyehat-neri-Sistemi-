@@ -3,12 +3,12 @@ import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
 
 const links = [
-  { to: "/", label: "Ana Sayfa", icon: "🏠" },
-  { to: "/places", label: "Mekanlar", icon: "📍" },
-  { to: "/map", label: "Harita", icon: "🗺️" },
-  { to: "/activity", label: "Aktiviteler", icon: "⚡" },
-  { to: "/ai", label: "AI Rota", icon: "✨" },
-  { to: "/profile", label: "Profil", icon: "👤" },
+  { to: "/", label: "Ana Sayfa" },
+  { to: "/places", label: "Mekanlar" },
+  { to: "/map", label: "Harita" },
+  { to: "/activity", label: "Aktiviteler" },
+  { to: "/ai", label: "AI Rota" },
+  { to: "/profile", label: "Profil" },
 ];
 
 export default function Navbar() {
@@ -22,7 +22,6 @@ export default function Navbar() {
   return (
     <nav style={s.nav}>
       <div style={s.brand}>
-        <span style={s.brandIcon}>✈️</span>
         <span style={s.brandText}>Seyahat</span>
       </div>
       <div style={s.links}>
@@ -31,7 +30,7 @@ export default function Navbar() {
             ...s.link,
             ...(location.pathname === l.to ? s.active : {})
           }}>
-            <span>{l.icon}</span> {l.label}
+            {l.label}
           </Link>
         ))}
       </div>

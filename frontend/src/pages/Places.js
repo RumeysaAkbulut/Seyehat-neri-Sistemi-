@@ -301,7 +301,7 @@ export default function Places() {
       <div style={s.filters}>
         {CATEGORIES.map(c => (
           <button key={c} style={{...s.chip, ...(category === c ? s.chipActive : {})}} onClick={() => setCategory(c)}>
-            {categoryEmoji(c)} {c}
+            {c}
           </button>
         ))}
       </div>
@@ -316,14 +316,20 @@ export default function Places() {
               <div style={{...s.imgFallback, display: place.image_url ? "none" : "flex"}}>
                 <span style={{fontSize:"40px"}}>{categoryEmoji(place.category)}</span>
               </div>
-              <button style={s.favBtn} onClick={e => { e.stopPropagation(); toggleFavorite(place); }}>
-                {favorites.has(place.id) ? "❤️" : "🤍"}
+              <button
+                style={{ ...s.favBtn, background: favorites.has(place.id) ? "rgba(153,27,27,0.85)" : "rgba(0,0,0,0.35)" }}
+                onClick={e => { e.stopPropagation(); toggleFavorite(place); }}
+                title={favorites.has(place.id) ? "Favoriden çıkar" : "Favoriye ekle"}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={favorites.has(place.id) ? "#fff" : "none"} stroke={favorites.has(place.id) ? "#fff" : "#e5e7eb"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
               </button>
             </div>
             <div style={s.cardBody} onClick={() => navigate(`/places/${place.id}`)} >
               <div style={{...s.cardName, cursor:"pointer"}}>{place.name}</div>
               <div style={s.cardMeta}>
-                <span style={s.cityTag}>📍 {place.city}</span>
+                <span style={s.cityTag}>{place.city}</span>
                 <span style={s.catTag}>{place.category}</span>
               </div>
               <div style={s.cardDesc}>{place.description || "—"}</div>
@@ -333,7 +339,7 @@ export default function Places() {
                     <div style={s.userRating}>
                       <span style={s.stars}>{stars(Math.round(reviewStats[place.id].avg))}</span>
                       <span style={s.ratingNum}>{Number(reviewStats[place.id].avg).toFixed(1)}</span>
-                      <span style={s.ratingBadge}>👥 {reviewStats[place.id].count}</span>
+                      <span style={s.ratingBadge}>{reviewStats[place.id].count} yorum</span>
                     </div>
                   ) : (
                     <div style={s.rating}>

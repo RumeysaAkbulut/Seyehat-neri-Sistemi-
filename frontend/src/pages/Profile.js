@@ -8,9 +8,9 @@ import CollectionsTab from "./Collections";
 const API = "http://localhost:5001";
 
 const TABS = [
-  { key: "profile",     label: "Profil",        icon: "👤" },
-  { key: "routes",      label: "Rotalarım",      icon: "🛤️" },
-  { key: "collections", label: "Koleksiyonlar",  icon: "📚" },
+  { key: "profile",     label: "Profil" },
+  { key: "routes",      label: "Rotalarım" },
+  { key: "collections", label: "Koleksiyonlar" },
 ];
 
 export default function Profile() {
@@ -78,7 +78,7 @@ export default function Profile() {
             style={{ ...s.tabBtn, ...(activeTab === tab.key ? s.tabActive : {}) }}
             onClick={() => setTab(tab.key)}
           >
-            <span>{tab.icon}</span> {tab.label}
+            {tab.label}
           </button>
         ))}
       </div>

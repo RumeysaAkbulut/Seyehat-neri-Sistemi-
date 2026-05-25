@@ -186,11 +186,14 @@ export default function PlaceDetail() {
             )}
           </div>
           <button
-            style={{ ...s.favBtn, background: isFav ? "#fef2f2" : t.primaryLight, color: isFav ? "#e11d48" : t.primary, border: `1.5px solid ${isFav ? "#fca5a5" : t.border}` }}
+            style={{ ...s.favBtn, background: isFav ? "#991b1b" : t.primaryLight, color: isFav ? "#fff" : t.primary, border: `1.5px solid ${isFav ? "#7f1d1d" : t.border}` }}
             onClick={toggleFav}
             disabled={favLoading}
           >
-            {isFav ? "❤️ Favoriden Çıkar" : "🤍 Favoriye Ekle"}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={isFav ? "#fff" : "none"} stroke={isFav ? "#fff" : t.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:"6px", flexShrink:0}}>
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            {isFav ? "Favoriden Çıkar" : "Favoriye Ekle"}
           </button>
         </div>
       </div>
@@ -364,7 +367,7 @@ const s = {
   loadingText: { fontSize: "16px", color: t.textMuted },
   topBar: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" },
   backBtn: { padding: "9px 18px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: "#fff", color: t.textMuted, fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-  favBtn: { padding: "9px 18px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+  favBtn: { padding: "9px 18px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center" },
   colBtn: { padding: "9px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: "#fff", color: t.primary, fontSize: "13px", fontWeight: 600, cursor: "pointer" },
   colDropdown: { position: "absolute", top: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, minWidth: "200px", overflow: "hidden" },
   colDropItem: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: "13px", color: t.text, cursor: "pointer", textAlign: "left", borderBottom: `1px solid ${t.borderLight}` },
