@@ -60,4 +60,62 @@ def create_app():
     app.register_blueprint(collection_bp)
     app.register_blueprint(activity_bp)
 
+    with app.app_context():
+        _seed_sample_places()
+
     return app
+
+
+def _seed_sample_places():
+    """DB boşsa örnek mekanları ekle. Tablolar henüz yoksa (test ortamı) sessizce çık."""
+    from app.models.place import Place
+    try:
+        if Place.query.count() > 0:
+            return
+    except Exception:
+        return  # Tablolar henüz oluşturulmamış (test/migration öncesi)
+    sample = [
+        {"name": "Topkapı Sarayı", "city": "İstanbul", "category": "tarihi",
+         "description": "Osmanlı İmparatorluğu'nun görkemli sarayı. 15. yüzyıldan 19. yüzyıla kadar Osmanlı sultanlarına ev sahipliği yapmıştır.",
+         "latitude": 41.0115, "longitude": 28.9833, "rating": 4.8,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Topkapi_palace_harem_pool.jpg/640px-Topkapi_palace_harem_pool.jpg"},
+        {"name": "Ayasofya", "city": "İstanbul", "category": "tarihi",
+         "description": "Bizans ve Osmanlı mimarisinin şaheseri. 537 yılında inşa edilen yapı, dünyanın en önemli mimari eserlerinden biridir.",
+         "latitude": 41.0086, "longitude": 28.9802, "rating": 4.9,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Hagia_Sophia_Mars_2013.jpg/640px-Hagia_Sophia_Mars_2013.jpg"},
+        {"name": "Galata Kulesi", "city": "İstanbul", "category": "tarihi",
+         "description": "İstanbul'un simgelerinden ortaçağ kulesi. Şehrin panoramik manzarasını sunar.",
+         "latitude": 41.0256, "longitude": 28.9742, "rating": 4.6,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Galata_tower.jpg/640px-Galata_tower.jpg"},
+        {"name": "Kapalıçarşı", "city": "İstanbul", "category": "alışveriş",
+         "description": "Dünyanın en büyük ve en eski kapalı çarşılarından biri. 4.000'den fazla dükkan barındırır.",
+         "latitude": 41.0108, "longitude": 28.9681, "rating": 4.5,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Grand_Bazaar%2C_Istanbul%2C_2013.jpg/640px-Grand_Bazaar%2C_Istanbul%2C_2013.jpg"},
+        {"name": "Anıtkabir", "city": "Ankara", "category": "tarihi",
+         "description": "Atatürk'ün anıt mezarı ve müzesi. Türkiye Cumhuriyeti'nin kurucusuna adanmıştır.",
+         "latitude": 39.9257, "longitude": 32.8375, "rating": 4.9,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/An%C4%B1tkabir_aerial.jpg/640px-An%C4%B1tkabir_aerial.jpg"},
+        {"name": "Ephesus", "city": "İzmir", "category": "tarihi",
+         "description": "Antik dünyanın en önemli Yunan şehirlerinden biri. UNESCO Dünya Mirası listesinde yer almaktadır.",
+         "latitude": 37.9395, "longitude": 27.3417, "rating": 4.9,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Ephesus_Celsus_Library_Fa%C3%A7ade.jpg/640px-Ephesus_Celsus_Library_Fa%C3%A7ade.jpg"},
+        {"name": "Pamukkale", "city": "Denizli", "category": "doğa",
+         "description": "Beyaz kireçtaşı terasları ve termal havuzlarıyla ünlü. UNESCO listesindedir.",
+         "latitude": 37.9137, "longitude": 29.1187, "rating": 4.8,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Pamukkale_2.jpg/640px-Pamukkale_2.jpg"},
+        {"name": "Kapadokya", "city": "Nevşehir", "category": "doğa",
+         "description": "Peri bacaları ve balonlu turizmiyle ünlü. Göreme Açık Hava Müzesi UNESCO listesindedir.",
+         "latitude": 38.6431, "longitude": 34.8289, "rating": 4.9,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Goreme_Cappadocia.jpg/640px-Goreme_Cappadocia.jpg"},
+        {"name": "Safranbolu", "city": "Karabük", "category": "tarihi",
+         "description": "UNESCO Dünya Mirası listesindeki Osmanlı evleri. Tarihi kent dokusu korunmaktadır.",
+         "latitude": 41.2532, "longitude": 32.6817, "rating": 4.7,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Safranbolu_0292.jpg/640px-Safranbolu_0292.jpg"},
+        {"name": "Alaçatı", "city": "İzmir", "category": "eğlence",
+         "description": "Taş evleri ve rüzgar sörfüyle ünlü tatil beldesi. Dar sokakları ve butik restoranlarıyla popülerdir.",
+         "latitude": 38.2800, "longitude": 26.3760, "rating": 4.7,
+         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Alacati_018.jpg/640px-Alacati_018.jpg"},
+    ]
+    for p in sample:
+        db.session.add(Place(**p))
+    db.session.commit()

@@ -15,19 +15,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Örnek mekanlar (backend'de olmayan ID'ler için fallback)
-const SAMPLE_PLACES = [
-  { id: 1, name: "Topkapı Sarayı", city: "İstanbul", category: "tarihi", description: "Osmanlı İmparatorluğu'nun görkemli sarayı. 15. yüzyıldan 19. yüzyıla kadar Osmanlı sultanlarına ev sahipliği yapmıştır.", latitude: 41.0115, longitude: 28.9833, rating: 4.8, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Topkapi_palace_harem_pool.jpg/640px-Topkapi_palace_harem_pool.jpg" },
-  { id: 2, name: "Ayasofya", city: "İstanbul", category: "tarihi", description: "Bizans ve Osmanlı mimarisinin şaheseri. 537 yılında inşa edilen yapı, dünyanın en önemli mimari eserlerinden biridir.", latitude: 41.0086, longitude: 28.9802, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Hagia_Sophia_Mars_2013.jpg/640px-Hagia_Sophia_Mars_2013.jpg" },
-  { id: 3, name: "Galata Kulesi", city: "İstanbul", category: "tarihi", description: "İstanbul'un simgelerinden ortaçağ kulesi. 528 metre yüksekliğinde olup şehrin panoramik manzarasını sunar.", latitude: 41.0256, longitude: 28.9742, rating: 4.6, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Galata_tower.jpg/640px-Galata_tower.jpg" },
-  { id: 4, name: "Kapalıçarşı", city: "İstanbul", category: "alışveriş", description: "Dünyanın en büyük ve en eski kapalı çarşılarından biri. 4.000'den fazla dükkan barındırır.", latitude: 41.0108, longitude: 28.9681, rating: 4.5, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Grand_Bazaar%2C_Istanbul%2C_2013.jpg/640px-Grand_Bazaar%2C_Istanbul%2C_2013.jpg" },
-  { id: 5, name: "Anıtkabir", city: "Ankara", category: "tarihi", description: "Atatürk'ün anıt mezarı ve müzesi. Türkiye Cumhuriyeti'nin kurucusu Mustafa Kemal Atatürk'e adanmıştır.", latitude: 39.9257, longitude: 32.8375, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/An%C4%B1tkabir_aerial.jpg/640px-An%C4%B1tkabir_aerial.jpg" },
-  { id: 6, name: "Ephesus", city: "İzmir", category: "tarihi", description: "Antik dünyanın en önemli Yunan şehirlerinden biri. UNESCO Dünya Mirası listesinde yer almaktadır.", latitude: 37.9395, longitude: 27.3417, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Ephesus_Celsus_Library_Fa%C3%A7ade.jpg/640px-Ephesus_Celsus_Library_Fa%C3%A7ade.jpg" },
-  { id: 7, name: "Pamukkale", city: "Denizli", category: "doğa", description: "Beyaz kireçtaşı terasları ve termal havuzlarıyla ünlü. Hierapolis antik kentiyle birlikte UNESCO listesindedir.", latitude: 37.9137, longitude: 29.1187, rating: 4.8, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Pamukkale_2.jpg/640px-Pamukkale_2.jpg" },
-  { id: 8, name: "Kapadokya", city: "Nevşehir", category: "doğa", description: "Peri bacaları ve balonlu turizmiyle ünlü. Göreme Açık Hava Müzesi UNESCO listesindedir.", latitude: 38.6431, longitude: 34.8289, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Goreme_Cappadocia.jpg/640px-Goreme_Cappadocia.jpg" },
-  { id: 9, name: "Safranbolu", city: "Karabük", category: "tarihi", description: "UNESCO Dünya Mirası listesindeki Osmanlı evleri. 17. yüzyıldan kalma tarihi kent dokusu korunmaktadır.", latitude: 41.2532, longitude: 32.6817, rating: 4.7, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Safranbolu_0292.jpg/640px-Safranbolu_0292.jpg" },
-  { id: 10, name: "Alaçatı", city: "İzmir", category: "eğlence", description: "Taş evleri ve rüzgar sörfüyle ünlü tatil beldesi. Dar taş sokakları ve butik restoranlarıyla popülerdir.", latitude: 38.2800, longitude: 26.3760, rating: 4.7, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Alacati_018.jpg/640px-Alacati_018.jpg" },
-];
 
 const categoryEmoji = { müze:"🏛️", park:"🌳", restoran:"🍽️", tarihi:"🏰", alışveriş:"🛍️", eğlence:"🎡", doğa:"🏔️" };
 const stars = (r) => "★".repeat(Math.round(r || 0)) + "☆".repeat(5 - Math.round(r || 0));
@@ -53,30 +40,18 @@ export default function PlaceDetail() {
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
   const numId = parseInt(id);
 
-  // Sample mekan ID'leri (backend'deki ID'lerle çakışmasın diye ayrı tutulur)
-  const SAMPLE_IDS = new Set(SAMPLE_PLACES.map(p => p.id));
-
   useEffect(() => {
     const load = async () => {
       setLoading(true);
 
-      const isSample = SAMPLE_IDS.has(numId);
-      const sample = isSample ? SAMPLE_PLACES.find(p => p.id === numId) : null;
-
-      if (isSample) {
-        // Sample mekan: hardcoded veriyi kullan, backend'den üzerine yazma
-        setPlace(sample);
+      // Her zaman backend'den çek
+      try {
+        const res = await axios.get(`http://localhost:5001/api/places/${id}`, authHeader);
+        setPlace(res.data.place);
+      } catch {
+        setPlace(null);
+      } finally {
         setLoading(false);
-      } else {
-        // DB mekanı: backend'den çek
-        try {
-          const res = await axios.get(`http://localhost:5001/api/places/${id}`, authHeader);
-          setPlace(res.data.place);
-        } catch {
-          setPlace(null);
-        } finally {
-          setLoading(false);
-        }
       }
 
       // Favori durumu

@@ -99,8 +99,8 @@ async function fetchWikipediaData(placeName, englishName) {
 export default function Places() {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [places, setPlaces] = useState(SAMPLE_PLACES);
-  const [filtered, setFiltered] = useState(SAMPLE_PLACES);
+  const [places, setPlaces] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [category, setCategory] = useState("Tümü");
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState(new Set());
@@ -128,35 +128,19 @@ export default function Places() {
     // DB mekanlarını çek (review_avg dahil)
     axios.get("http://localhost:5001/api/places/", authHeader)
       .then(r => {
-        if (r.data.places?.length) {
-          const ids = new Set(SAMPLE_PLACES.map(p => p.id));
-          const newPlaces = r.data.places.filter(p => !ids.has(p.id));
-          setPlaces([...SAMPLE_PLACES, ...newPlaces]);
-          // DB mekanların review istatistiklerini kaydet
-          const stats = {};
-          r.data.places.forEach(p => {
-            if (p.review_avg !== null && p.review_avg !== undefined) {
-              stats[p.id] = { avg: p.review_avg, count: p.review_count || 0 };
-            }
-          });
-          setReviewStats(stats);
-        }
+        const allPlaces = r.data.places || [];
+        setPlaces(allPlaces);
+        const stats = {};
+        allPlaces.forEach(p => {
+          if (p.review_avg !== null && p.review_avg !== undefined) {
+            stats[p.id] = { avg: p.review_avg, count: p.review_count || 0 };
+          }
+        });
+        setReviewStats(stats);
       }).catch(() => {});
     axios.get("http://localhost:5001/api/favorites/", authHeader)
       .then(r => setFavorites(new Set(r.data.favorites.map(f => f.place_id))))
       .catch(() => {});
-    // Sample mekanlar için review istatistiklerini çek
-    Promise.all(
-      SAMPLE_PLACES.map(p =>
-        axios.get(`http://localhost:5001/api/reviews/${p.id}`, authHeader)
-          .then(r => ({ id: p.id, avg: r.data.average_rating, count: r.data.count }))
-          .catch(() => null)
-      )
-    ).then(results => {
-      const stats = {};
-      results.forEach(r => { if (r && r.avg !== null) stats[r.id] = { avg: r.avg, count: r.count }; });
-      setReviewStats(prev => ({ ...prev, ...stats }));
-    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,7 +248,7 @@ export default function Places() {
       image_url: form.image_url || null,
     };
     try {
-      if (editingId && editingId > 1000) {
+      if (editingId) {
         const res = await axios.put(`http://localhost:5001/api/places/${editingId}`, payload, authHeader);
         setPlaces(prev => prev.map(p => p.id === editingId ? res.data.place : p));
       } else {
@@ -278,7 +262,6 @@ export default function Places() {
   };
 
   const handleDelete = async (place) => {
-    if (place.id <= 1000) return;
     if (!window.confirm(`"${place.name}" silinsin mi?`)) return;
     try {
       await axios.delete(`http://localhost:5001/api/places/${place.id}`, authHeader);
@@ -359,18 +342,24 @@ export default function Places() {
                     </div>
                   )}
                 </div>
-                {place.id > 1000 && (
-                  <div style={s.actions} onClick={e => e.stopPropagation()}>
-                    <button style={s.editBtn} onClick={() => openEdit(place)}>Düzenle</button>
-                    <button style={s.deleteBtn} onClick={() => handleDelete(place)}>Sil</button>
-                  </div>
-                )}
+                <div style={s.actions} onClick={e => e.stopPropagation()}>
+                  <button style={s.editBtn} onClick={() => openEdit(place)}>Düzenle</button>
+                  <button style={s.deleteBtn} onClick={() => handleDelete(place)}>Sil</button>
+                </div>
               </div>
             </div>
           </div>
         ))}
-        {filtered.length === 0 && (
-          <div style={s.empty}><span style={{fontSize:"36px"}}>🔍</span> Mekan bulunamadı.</div>
+        {filtered.length === 0 && places.length === 0 && (
+          <div style={s.empty}>
+            <span style={{fontSize:"48px"}}>🗺️</span>
+            <div style={{fontWeight:600, fontSize:"15px"}}>Henüz mekan eklenmemiş</div>
+            <div style={{fontSize:"13px"}}>İlk mekanını eklemek için "Mekan Ekle" butonuna tıkla.</div>
+            <button style={s.addBtn} onClick={openAdd}>+ İlk Mekanı Ekle</button>
+          </div>
+        )}
+        {filtered.length === 0 && places.length > 0 && (
+          <div style={s.empty}><span style={{fontSize:"36px"}}>🔍</span> Arama kriterlerine uyan mekan bulunamadı.</div>
         )}
       </div>
 
