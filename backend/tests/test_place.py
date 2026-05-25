@@ -26,6 +26,18 @@ def place_repo(app):
 def place_service(app):
     return PlaceService()
 
+@pytest.fixture
+def auth_header(client):
+    """Kayıt ve giriş yaparak JWT token içeren Authorization header döner."""
+    client.post('/api/users/register', json={
+        'name': 'Test', 'email': 'place_test@test.com', 'password': '123456'
+    })
+    resp = client.post('/api/users/login', json={
+        'email': 'place_test@test.com', 'password': '123456'
+    })
+    token = resp.get_json()['token']
+    return {'Authorization': f'Bearer {token}'}
+
 class TestPlaceRepository:
     def test_create_place(self, app, place_repo):
         with app.app_context():
@@ -66,24 +78,24 @@ class TestPlaceService:
             assert len(results) == 1
 
 class TestPlaceAPI:
-    def test_add_place_endpoint(self, client):
+    def test_add_place_endpoint(self, client, auth_header):
         response = client.post('/api/places/', json={
             'name': 'Ayasofya', 'description': 'Tarihi muze',
             'category': 'muze', 'city': 'Istanbul'
-        })
+        }, headers=auth_header)
         assert response.status_code == 201
 
-    def test_get_places_endpoint(self, client):
+    def test_get_places_endpoint(self, client, auth_header):
         client.post('/api/places/', json={
             'name': 'Ayasofya', 'description': 'Muze',
             'category': 'muze', 'city': 'Istanbul'
-        })
-        response = client.get('/api/places/')
+        }, headers=auth_header)
+        response = client.get('/api/places/', headers=auth_header)
         assert response.status_code == 200
 
-    def test_filter_by_city_endpoint(self, client):
-        client.post('/api/places/', json={'name': 'Ayasofya', 'description': 'Muze', 'category': 'muze', 'city': 'Istanbul'})
-        client.post('/api/places/', json={'name': 'Anit Kabir', 'description': 'Anit', 'category': 'anit', 'city': 'Ankara'})
-        response = client.get('/api/places/?city=Istanbul')
+    def test_filter_by_city_endpoint(self, client, auth_header):
+        client.post('/api/places/', json={'name': 'Ayasofya', 'description': 'Muze', 'category': 'muze', 'city': 'Istanbul'}, headers=auth_header)
+        client.post('/api/places/', json={'name': 'Anit Kabir', 'description': 'Anit', 'category': 'anit', 'city': 'Ankara'}, headers=auth_header)
+        response = client.get('/api/places/?city=Istanbul', headers=auth_header)
         data = response.get_json()
         assert len(data['places']) == 1
