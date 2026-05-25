@@ -12,7 +12,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
 
     # Render, DATABASE_URL'i "postgres://" formatında verir; SQLAlchemy "postgresql://" ister.
@@ -25,6 +25,10 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 86400 * 7  # 7 gün
+
+    # Test ortamı: production DB'ye dokunmadan izole bir config kullan
+    if test_config:
+        app.config.update(test_config)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -60,8 +64,10 @@ def create_app():
     app.register_blueprint(collection_bp)
     app.register_blueprint(activity_bp)
 
-    with app.app_context():
-        _seed_sample_places()
+    # Seed yalnızca test olmayan ortamda çalışır
+    if not test_config:
+        with app.app_context():
+            _seed_sample_places()
 
     return app
 
