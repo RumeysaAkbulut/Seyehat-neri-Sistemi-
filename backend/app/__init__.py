@@ -34,11 +34,11 @@ def create_app():
     frontend_url = os.getenv('FRONTEND_URL', '*')
     CORS(app, origins=frontend_url)
 
-    from app.models.user import User
-    from app.models.favorite import Favorite
-    from app.models.route import Route
-    from app.models.review import Review
-    from app.models.collection import Collection, CollectionItem
+    from app.models.user import User  # noqa: F401
+    from app.models.favorite import Favorite  # noqa: F401
+    from app.models.route import Route  # noqa: F401
+    from app.models.review import Review  # noqa: F401
+    from app.models.collection import Collection, CollectionItem  # noqa: F401
 
     from app.controllers.main_controller import main_bp
     from app.controllers.user_controller import user_bp
@@ -60,6 +60,4 @@ def create_app():
     app.register_blueprint(collection_bp)
     app.register_blueprint(activity_bp)
 
-
     return app
-

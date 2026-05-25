@@ -41,7 +41,7 @@ def _try_generate(client, prompt):
                 time.sleep(1)
                 continue
             raise
-        except Exception as e:
+        except Exception:
             raise
     return None, None, last_error
 

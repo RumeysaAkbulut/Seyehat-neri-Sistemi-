@@ -25,7 +25,7 @@ jobs:
         working-directory: backend
         run: |
           flake8 app/ --max-line-length=120 --exclude=__pycache__,migrations \
-            --ignore=E501,W503,E302,E303,W291,W293,E501
+            --ignore=E501,W503,E302,E303,W291,W293,E301
 
   # ── 2. Backend: Test ───────────────────────────────────────────────────────
   backend-tests:

@@ -1,7 +1,6 @@
 from app import db
 from datetime import datetime
 import json
-import uuid
 
 class Route(db.Model):
     __tablename__ = 'routes'
