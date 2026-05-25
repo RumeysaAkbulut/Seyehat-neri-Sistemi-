@@ -103,17 +103,23 @@ jobs:
 
     steps:
       - name: Deploy backend to Render
-        if: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK != '' }}
+        env:
+          HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
         run: |
-          curl -s --fail "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
-            -X POST -d '' \
-            && echo "Backend deploy triggered." \
-            || echo "Backend deploy hook not configured."
+          if [ -n "$HOOK" ]; then
+            curl -s --fail "$HOOK" -X POST -d ''
+            echo "Backend deploy triggered."
+          else
+            echo "RENDER_BACKEND_DEPLOY_HOOK secret henüz ayarlanmamış, atlanıyor."
+          fi
 
       - name: Deploy frontend to Render
-        if: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK != '' }}
+        env:
+          HOOK: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}
         run: |
-          curl -s --fail "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
-            -X POST -d '' \
-            && echo "Frontend deploy triggered." \
-            || echo "Frontend deploy hook not configured."
+          if [ -n "$HOOK" ]; then
+            curl -s --fail "$HOOK" -X POST -d ''
+            echo "Frontend deploy triggered."
+          else
+            echo "RENDER_FRONTEND_DEPLOY_HOOK secret henüz ayarlanmamış, atlanıyor."
+          fi
