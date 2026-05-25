@@ -429,7 +429,7 @@ export default function Places() {
                           <img src={form.image_url} alt="" style={s.previewImg} onError={e => e.target.style.display="none"} />
                         )}
                         {!imageLoading && form.rating && (
-                          <div style={s.ratingBadge}>
+                          <div style={s.ratingBadgeLarge}>
                             ⭐ Puan: <strong>{form.rating}</strong> &nbsp;{"★".repeat(Math.round(form.rating))}{"☆".repeat(5 - Math.round(form.rating))}
                             <span style={s.ratingHint}> (Wikipedia popülerliğinden)</span>
                           </div>
@@ -598,7 +598,7 @@ const s = {
   selectedMeta: { fontSize:"11px", color:t.textMuted, marginBottom:"4px" },
   selectedCoords: { fontSize:"11px", color:t.textMuted, marginBottom:"10px" },
   imgLoadingMsg: { fontSize:"12px", color:t.textMuted, padding:"8px 0", fontStyle:"italic" },
-  ratingBadge: { fontSize:"13px", color:t.primary, fontWeight:500, marginTop:"8px", padding:"6px 10px", background:"#fff", borderRadius:"8px", display:"inline-block" },
+  ratingBadgeLarge: { fontSize:"13px", color:t.primary, fontWeight:500, marginTop:"8px", padding:"6px 10px", background:"#fff", borderRadius:"8px", display:"inline-block" },
   ratingHint: { fontSize:"11px", color:t.textMuted, fontWeight:400 },
   previewImg: { width:"100%", height:"140px", objectFit:"cover", borderRadius:"8px", marginTop:"8px" },
   noImgMsg: { fontSize:"12px", color:t.textMuted, fontStyle:"italic" },

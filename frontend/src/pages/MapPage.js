@@ -254,7 +254,6 @@ export default function MapPage() {
   const [routingLoading, setRoutingLoading] = useState(false);
   const [travelMode, setTravelMode] = useState('driving'); // 'driving' | 'walking' | 'cycling'
   const pinCountRef = useRef(0);
-  const debounceRef = useRef(null);
   const routingTimerRef = useRef(null);
 
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };

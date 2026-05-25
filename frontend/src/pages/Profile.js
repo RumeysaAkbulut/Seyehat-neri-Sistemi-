@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import RoutesTab from "./Routes";
@@ -15,7 +15,6 @@ const TABS = [
 
 export default function Profile() {
   const { user, token, login } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Active tab from URL param, default → "profile"
