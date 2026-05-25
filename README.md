@@ -252,6 +252,51 @@ Seyehat-neri-Sistemi-/
 
 ---
 
+## Production Deploy (Render)
+
+Proje [Render](https://render.com) üzerinde ücretsiz olarak deploy edilmiştir.  
+Repo kökündeki `render.yaml` dosyası tüm servisleri tanımlar (backend, frontend, PostgreSQL).
+
+### Hızlı Deploy Adımları
+
+1. **Neon PostgreSQL** oluştur → [neon.tech](https://neon.tech) (ücretsiz)  
+   Connection string'i kopyala.
+
+2. **Render hesabı** aç → "New Blueprint" → Bu repoyu seç → `render.yaml` otomatik algılanır.
+
+3. **Render Dashboard → Environment Variables** (her servis için):
+
+   | Servis | Değişken | Değer |
+   |--------|----------|-------|
+   | Backend | `SECRET_KEY` | Rastgele string |
+   | Backend | `JWT_SECRET_KEY` | Rastgele string |
+   | Backend | `GEMINI_API_KEY` | Google AI Studio'dan |
+   | Backend | `DATABASE_URL` | Neon connection string |
+   | Backend | `FRONTEND_URL` | Render frontend URL'i |
+   | Frontend | `REACT_APP_API_URL` | Render backend URL'i |
+
+4. **GitHub Secrets** (CI/CD otomatik deploy için):
+   - `RENDER_BACKEND_DEPLOY_HOOK` → Render Backend → Settings → Deploy Hook URL
+   - `RENDER_FRONTEND_DEPLOY_HOOK` → Render Frontend → Settings → Deploy Hook URL
+
+### CI/CD Akışı
+
+```
+Pull Request açıldı
+       │
+       ├─ Lint (flake8)
+       ├─ Test (pytest, 37 test)
+       └─ Frontend Build (npm run build)
+              │
+    main branch'e merge
+              │
+       └─ Deploy (Render webhook)
+              ├─ Backend otomatik deploy
+              └─ Frontend otomatik deploy
+```
+
+---
+
 ## Lisans
 
 MIT
