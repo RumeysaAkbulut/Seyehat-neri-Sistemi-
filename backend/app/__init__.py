@@ -71,8 +71,14 @@ def create_app(test_config=None):
 
 
 def _seed_sample_places():
-    """Eksik örnek mekanları ekle. Mevcut mekanların isimleri kontrol edilir;
-    kullanıcının eklediği mekanlar asla silinmez veya üzerine yazılmaz."""
+    """Örnek mekanları sadece ilk çalıştırmada ekle. Sonraki restart'larda hiç dokunma.
+    .seeded flag dosyası varsa seed atlanır — kullanıcının sildiği mekanlar geri gelmez."""
+    import os
+    instance_dir = os.path.join(os.path.dirname(__file__), '..', 'instance')
+    seed_flag = os.path.join(instance_dir, '.seeded')
+    if os.path.exists(seed_flag):
+        return  # Daha önce seed yapıldı, bir daha yapma
+
     from app.models.place import Place
     try:
         existing_names = {p.name for p in Place.query.with_entities(Place.name).all()}
@@ -127,3 +133,11 @@ def _seed_sample_places():
             added = True
     if added:
         db.session.commit()
+
+    # Seed tamamlandı — flag dosyası oluştur, bir daha çalışmasın
+    try:
+        os.makedirs(instance_dir, exist_ok=True)
+        with open(seed_flag, 'w') as f:
+            f.write('seeded')
+    except Exception:
+        pass
