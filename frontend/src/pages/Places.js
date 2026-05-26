@@ -6,18 +6,6 @@ import { t } from "../theme";
 
 const CATEGORIES = ["Tümü", "Favorilerim", "müze", "park", "restoran", "tarihi", "alışveriş", "eğlence", "doğa"];
 
-const SAMPLE_PLACES = [
-  { id: 1, name: "Topkapı Sarayı", city: "İstanbul", category: "tarihi", description: "Osmanlı İmparatorluğu'nun görkemli sarayı.", latitude: 41.0115, longitude: 28.9833, rating: 4.8, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Topkapi_palace_harem_pool.jpg/640px-Topkapi_palace_harem_pool.jpg" },
-  { id: 2, name: "Ayasofya", city: "İstanbul", category: "tarihi", description: "Bizans ve Osmanlı mimarisinin şaheseri.", latitude: 41.0086, longitude: 28.9802, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Hagia_Sophia_Mars_2013.jpg/640px-Hagia_Sophia_Mars_2013.jpg" },
-  { id: 3, name: "Galata Kulesi", city: "İstanbul", category: "tarihi", description: "İstanbul'un simgelerinden ortaçağ kulesi.", latitude: 41.0256, longitude: 28.9742, rating: 4.6, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Galata_tower.jpg/640px-Galata_tower.jpg" },
-  { id: 4, name: "Kapalıçarşı", city: "İstanbul", category: "alışveriş", description: "Dünyanın en büyük ve en eski kapalı çarşılarından.", latitude: 41.0108, longitude: 28.9681, rating: 4.5, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Grand_Bazaar%2C_Istanbul%2C_2013.jpg/640px-Grand_Bazaar%2C_Istanbul%2C_2013.jpg" },
-  { id: 5, name: "Anıtkabir", city: "Ankara", category: "tarihi", description: "Atatürk'ün anıt mezarı ve müzesi.", latitude: 39.9257, longitude: 32.8375, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/An%C4%B1tkabir_aerial.jpg/640px-An%C4%B1tkabir_aerial.jpg" },
-  { id: 6, name: "Ephesus", city: "İzmir", category: "tarihi", description: "Antik dünyanın en önemli Yunan şehirlerinden biri.", latitude: 37.9395, longitude: 27.3417, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Ephesus_Celsus_Library_Fa%C3%A7ade.jpg/640px-Ephesus_Celsus_Library_Fa%C3%A7ade.jpg" },
-  { id: 7, name: "Pamukkale", city: "Denizli", category: "doğa", description: "Beyaz kireçtaşı terasları ve termal havuzları.", latitude: 37.9137, longitude: 29.1187, rating: 4.8, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Pamukkale_2.jpg/640px-Pamukkale_2.jpg" },
-  { id: 8, name: "Kapadokya", city: "Nevşehir", category: "doğa", description: "Peri bacaları ve balonlu turizmiyle ünlü.", latitude: 38.6431, longitude: 34.8289, rating: 4.9, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Goreme_Cappadocia.jpg/640px-Goreme_Cappadocia.jpg" },
-  { id: 9, name: "Safranbolu", city: "Karabük", category: "tarihi", description: "UNESCO Dünya Mirası Osmanlı evleri.", latitude: 41.2532, longitude: 32.6817, rating: 4.7, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Safranbolu_0292.jpg/640px-Safranbolu_0292.jpg" },
-  { id: 10, name: "Alaçatı", city: "İzmir", category: "eğlence", description: "Taş evleri ve rüzgar sörfüyle ünlü tatil beldesi.", latitude: 38.2800, longitude: 26.3760, rating: 4.7, image_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Alacati_018.jpg/640px-Alacati_018.jpg" },
-];
 
 const EMPTY_FORM = { name: "", city: "", category: "tarihi", description: "", latitude: "", longitude: "", rating: "", image_url: "" };
 

@@ -43,6 +43,7 @@ def create_app(test_config=None):
     from app.models.route import Route  # noqa: F401
     from app.models.review import Review  # noqa: F401
     from app.models.collection import Collection, CollectionItem  # noqa: F401
+    from app.models.friendship import Friendship  # noqa: F401
 
     from app.controllers.main_controller import main_bp
     from app.controllers.user_controller import user_bp
@@ -53,6 +54,7 @@ def create_app(test_config=None):
     from app.controllers.review_controller import review_bp
     from app.controllers.collection_controller import collection_bp
     from app.controllers.activity_controller import activity_bp
+    from app.controllers.friendship_controller import friendship_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(place_bp)
@@ -63,6 +65,7 @@ def create_app(test_config=None):
     app.register_blueprint(review_bp)
     app.register_blueprint(collection_bp)
     app.register_blueprint(activity_bp)
+    app.register_blueprint(friendship_bp)
 
     # Seed yalnızca test olmayan ortamda çalışır
     if not test_config:
