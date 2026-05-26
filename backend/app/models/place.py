@@ -12,8 +12,9 @@ class Place(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     rating = db.Column(db.Float, default=0.0)
+    image_url = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -24,6 +25,7 @@ class Place(db.Model):
             'latitude': self.latitude,
             'longitude': self.longitude,
             'rating': self.rating,
+            'image_url': self.image_url,
             'created_at': self.created_at.isoformat()
         }
     
