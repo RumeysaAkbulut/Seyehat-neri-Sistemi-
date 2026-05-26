@@ -39,6 +39,39 @@ class FriendshipRepository:
         db.session.delete(friendship)
         db.session.commit()
 
+    def get_user_favorites(self, user_id):
+        """Bir kullanıcının favori mekanlarını, mekan bilgileriyle döndür."""
+        from app.models.favorite import Favorite
+        favs = (Favorite.query
+                .filter_by(user_id=user_id)
+                .order_by(Favorite.created_at.desc()).all())
+        result = []
+        for f in favs:
+            place = Place.query.get(f.place_id)
+            if place:
+                result.append({
+                    'place_id': place.id,
+                    'place_name': place.name,
+                    'city': place.city,
+                    'category': place.category,
+                    'rating': place.rating,
+                    'image_url': place.image_url,
+                })
+        return result
+
+    def get_user_routes(self, user_id):
+        """Bir kullanıcının kaydettiği rotaları döndür."""
+        routes = (Route.query
+                  .filter_by(user_id=user_id)
+                  .order_by(Route.created_at.desc()).all())
+        return [{
+            'id': r.id,
+            'name': r.name,
+            'description': r.description or '',
+            'waypoint_count': len(r.get_waypoints()),
+            'created_at': r.created_at.isoformat(),
+        } for r in routes]
+
     def get_feed(self, following_ids, limit=25):
         activities = []
 

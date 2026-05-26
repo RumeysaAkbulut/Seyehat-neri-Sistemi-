@@ -132,6 +132,109 @@ function UserCard({ user, onToggle, loading }) {
   );
 }
 
+/* ─── Kullanıcı Profil Paneli ───────────────────────────────────────────────── */
+function UserProfile({ user, token, navigate, onClose }) {
+  const authH = { headers: { Authorization: `Bearer ${token}` } };
+  const [favorites, setFavorites] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [profTab, setProfTab] = useState("favorites");
+
+  useEffect(() => {
+    setLoading(true);
+    axios.get(`${API}/social/user/${user.id}/profile`, authH)
+      .then(r => {
+        setFavorites(r.data.favorites || []);
+        setRoutes(r.data.routes || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id]);
+
+  const catEmoji = c => ({ tarihi:"🏰", müze:"🏛️", park:"🌳", restoran:"🍽️", alışveriş:"🛍️", eğlence:"🎡", doğa:"🏔️" }[c] || "📍");
+
+  return (
+    <div style={sp.panel}>
+      {/* Başlık */}
+      <div style={sp.header}>
+        <button style={sp.backBtn} onClick={onClose}>← Geri</button>
+        <Avatar name={user.name} size={40} />
+        <div>
+          <div style={sp.name}>{user.name}</div>
+          <div style={sp.meta}>{favorites.length} favori · {routes.length} rota</div>
+        </div>
+      </div>
+
+      {/* Sekmeler */}
+      <div style={sp.tabs}>
+        <button style={{...sp.tab, ...(profTab==="favorites" ? sp.tabActive : {})}} onClick={() => setProfTab("favorites")}>
+          ❤️ Favori Mekanlar ({favorites.length})
+        </button>
+        <button style={{...sp.tab, ...(profTab==="routes" ? sp.tabActive : {})}} onClick={() => setProfTab("routes")}>
+          🗺️ Rotalar ({routes.length})
+        </button>
+      </div>
+
+      {loading && <div style={sp.hint}>Yükleniyor...</div>}
+
+      {/* Favoriler */}
+      {!loading && profTab === "favorites" && (
+        favorites.length === 0
+          ? <div style={sp.empty}>Henüz favoriye eklediği mekan yok.</div>
+          : <div style={sp.list}>
+              {favorites.map(f => (
+                <div key={f.place_id} style={sp.item} onClick={() => navigate(`/places/${f.place_id}`)}>
+                  <div style={sp.itemImg}>
+                    {f.image_url
+                      ? <img src={f.image_url} alt={f.place_name} style={sp.img} onError={e => e.target.style.display="none"} />
+                      : <span style={{fontSize:"24px"}}>{catEmoji(f.category)}</span>}
+                  </div>
+                  <div style={sp.itemBody}>
+                    <div style={sp.itemName}>{f.place_name}</div>
+                    <div style={sp.itemMeta}>
+                      <span style={sp.cityTag}>{f.city}</span>
+                      <span style={sp.catTag}>{f.category}</span>
+                    </div>
+                    {f.rating > 0 && (
+                      <div style={sp.rating}>
+                        {"★".repeat(Math.round(f.rating))}{"☆".repeat(5-Math.round(f.rating))}
+                        <span style={{marginLeft:"4px", fontWeight:700}}>{Number(f.rating).toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+              ))}
+            </div>
+      )}
+
+      {/* Rotalar */}
+      {!loading && profTab === "routes" && (
+        routes.length === 0
+          ? <div style={sp.empty}>Henüz kaydettiği rota yok.</div>
+          : <div style={sp.list}>
+              {routes.map(r => (
+                <div key={r.id} style={{...sp.item, cursor:"default"}}>
+                  <div style={{...sp.itemImg, background: t.primaryLight}}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/></svg>
+                  </div>
+                  <div style={sp.itemBody}>
+                    <div style={sp.itemName}>{r.name}</div>
+                    {r.description && <div style={sp.itemDesc}>{r.description}</div>}
+                    <div style={sp.itemMeta}>
+                      <span style={sp.catTag}>{r.waypoint_count} durak</span>
+                      <span style={{fontSize:"11px", color:t.textMuted}}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Ana bileşen ───────────────────────────────────────────────────────────── */
 export default function Social() {
   const { token } = useAuth();
@@ -153,6 +256,9 @@ export default function Social() {
   // Takip Ettiklerim
   const [following, setFollowing] = useState([]);
   const [followLoading, setFollowLoading] = useState(null); // user id
+
+  // Seçili kullanıcı profili
+  const [selectedUser, setSelectedUser] = useState(null);
 
   /* İlk yükleme */
   useEffect(() => {
@@ -219,9 +325,12 @@ export default function Social() {
         {following.length === 0
           ? <div style={s.sideEmpty}>Henüz kimseyi takip etmiyorsun. Arama sekmesinden kullanıcı bul.</div>
           : following.map(u => (
-            <div key={u.id} style={s.sideUser}>
-              <Avatar name={u.name} size={30} />
-              <span style={s.sideUserName}>{u.name}</span>
+            <div key={u.id} style={{...s.sideUser, ...(selectedUser?.id === u.id ? s.sideUserActive : {})}}>
+              <div style={{display:"flex", alignItems:"center", gap:"8px", flex:1, minWidth:0, cursor:"pointer"}}
+                   onClick={() => setSelectedUser(selectedUser?.id === u.id ? null : u)}>
+                <Avatar name={u.name} size={30} />
+                <span style={s.sideUserName}>{u.name}</span>
+              </div>
               <button
                 style={s.unfollowSmall}
                 onClick={() => toggleFollow(u)}
@@ -238,8 +347,18 @@ export default function Social() {
       {/* Ana içerik */}
       <div style={s.main}>
 
+        {/* Kullanıcı profili seçiliyse göster */}
+        {selectedUser && (
+          <UserProfile
+            user={selectedUser}
+            token={token}
+            navigate={navigate}
+            onClose={() => setSelectedUser(null)}
+          />
+        )}
+
         {/* Başlık + tab seçici */}
-        <div style={s.header}>
+        {!selectedUser && <div style={s.header}>
           <div>
             <h1 style={s.title}>Sosyal Akış</h1>
             <p style={s.sub}>Takip ettiğin kişilerin seyahat aktiviteleri</p>
@@ -258,10 +377,10 @@ export default function Social() {
               Kullanıcı Ara
             </button>
           </div>
-        </div>
+        </div>}
 
         {/* ── AKIŞ SEKME ── */}
-        {tab === "feed" && (
+        {!selectedUser && tab === "feed" && (
           <>
             {feedLoading && (
               <div style={s.center}>
@@ -299,7 +418,7 @@ export default function Social() {
         )}
 
         {/* ── ARAMA SEKME ── */}
-        {tab === "search" && (
+        {!selectedUser && tab === "search" && (
           <div style={s.searchSection}>
             <div style={s.searchBox}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -398,4 +517,32 @@ const s = {
   userName:  { fontSize: "14px", fontWeight: 600, color: t.text },
   followBtn: { padding: "7px 16px", borderRadius: "20px", border: `1.5px solid ${t.primary}`, background: t.gradient, color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer", transition: "all 0.15s", flexShrink: 0, fontFamily: t.font },
   followingBtn: { background: "#fff", color: t.textMuted, borderColor: t.border },
+
+  /* Sidebar aktif kullanıcı */
+  sideUserActive: { background: t.primaryLight, borderRadius: "8px", padding: "3px 4px", margin: "-3px -4px" },
+};
+
+/* ─── Profil Paneli Stilleri ─────────────────────────────────────────────── */
+const sp = {
+  panel:   { flex: 1 },
+  header:  { display: "flex", alignItems: "center", gap: "14px", marginBottom: "1.5rem", flexWrap: "wrap" },
+  backBtn: { padding: "7px 14px", borderRadius: "20px", border: `1.5px solid ${t.border}`, background: "#fff", fontSize: "13px", color: t.textMuted, cursor: "pointer", fontFamily: t.font, marginRight: "4px" },
+  name:    { fontSize: "18px", fontWeight: 700, color: t.text },
+  meta:    { fontSize: "12px", color: t.textMuted, marginTop: "2px" },
+  tabs:    { display: "flex", gap: "8px", marginBottom: "1.25rem" },
+  tab:     { padding: "8px 18px", borderRadius: "20px", border: `1.5px solid ${t.border}`, background: "#fff", fontSize: "13px", fontWeight: 600, color: t.textMuted, cursor: "pointer", fontFamily: t.font },
+  tabActive: { background: t.primaryLight, color: t.primary, borderColor: t.primary },
+  hint:    { fontSize: "13px", color: t.textMuted, padding: "1rem 0" },
+  empty:   { fontSize: "14px", color: t.textMuted, padding: "2rem 0", textAlign: "center" },
+  list:    { display: "flex", flexDirection: "column", gap: "8px" },
+  item:    { display: "flex", alignItems: "center", gap: "12px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}`, padding: "10px 14px", cursor: "pointer" },
+  itemImg: { width: "48px", height: "48px", borderRadius: "10px", background: "#F1F5F9", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" },
+  img:     { width: "100%", height: "100%", objectFit: "cover" },
+  itemBody:{ flex: 1, minWidth: 0 },
+  itemName:{ fontSize: "14px", fontWeight: 600, color: t.text, marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  itemDesc:{ fontSize: "12px", color: t.textMuted, marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  itemMeta:{ display: "flex", gap: "6px", alignItems: "center" },
+  cityTag: { fontSize: "11px", padding: "2px 7px", borderRadius: "6px", background: t.primaryLight, color: t.primary, fontWeight: 600 },
+  catTag:  { fontSize: "11px", padding: "2px 7px", borderRadius: "6px", background: "#F1F5F9", color: t.textMuted, fontWeight: 500 },
+  rating:  { fontSize: "12px", color: "#F59E0B", marginTop: "3px" },
 };

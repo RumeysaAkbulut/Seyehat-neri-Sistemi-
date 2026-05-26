@@ -94,3 +94,28 @@ def get_social_feed():
 
     activities.sort(key=lambda x: x['created_at'], reverse=True)
     return jsonify({'activities': activities[:40]}), 200
+
+
+# ── Kullanıcı Profili (favoriler + rotalar) ───────────────────────────────────
+
+@friendship_bp.route('/user/<int:user_id>/profile', methods=['GET'])
+@jwt_required()
+def get_user_profile(user_id):
+    """Takip edilen kullanıcının favori mekanlarını ve rotalarını döndür."""
+    current_user_id = int(get_jwt_identity())
+
+    target = friendship_repo.find_user_by_id(user_id)
+    if not target:
+        return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
+
+    # Sadece kendisi veya takipçisi görebilir
+    is_self = current_user_id == user_id
+    is_following = bool(friendship_repo.find(current_user_id, user_id))
+    if not is_self and not is_following:
+        return jsonify({'error': 'Bu kullanıcıyı takip etmiyorsunuz'}), 403
+
+    return jsonify({
+        'user': {'id': target.id, 'name': target.name},
+        'favorites': friendship_repo.get_user_favorites(user_id),
+        'routes': friendship_repo.get_user_routes(user_id),
+    }), 200
