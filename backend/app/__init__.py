@@ -67,22 +67,17 @@ def create_app(test_config=None):
     app.register_blueprint(activity_bp)
     app.register_blueprint(friendship_bp)
 
-    # Seed yalnızca test olmayan ortamda çalışır
-    if not test_config:
-        with app.app_context():
-            _seed_sample_places()
-
     return app
 
 
 def _seed_sample_places():
-    """DB boşsa örnek mekanları ekle. Tablolar henüz yoksa (test ortamı) sessizce çık."""
+    """Eksik örnek mekanları ekle. Mevcut mekanların isimleri kontrol edilir;
+    kullanıcının eklediği mekanlar asla silinmez veya üzerine yazılmaz."""
     from app.models.place import Place
     try:
-        if Place.query.count() > 0:
-            return
+        existing_names = {p.name for p in Place.query.with_entities(Place.name).all()}
     except Exception:
-        return  # Tablolar henüz oluşturulmamış (test/migration öncesi)
+        return  # Tablolar henüz oluşturulmamış (migration öncesi)
     sample = [
         {"name": "Topkapı Sarayı", "city": "İstanbul", "category": "tarihi",
          "description": "Osmanlı İmparatorluğu'nun görkemli sarayı. 15. yüzyıldan 19. yüzyıla kadar Osmanlı sultanlarına ev sahipliği yapmıştır.",
@@ -125,6 +120,10 @@ def _seed_sample_places():
          "latitude": 38.2800, "longitude": 26.3760, "rating": 4.7,
          "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Alacati_018.jpg/640px-Alacati_018.jpg"},
     ]
+    added = False
     for p in sample:
-        db.session.add(Place(**p))
-    db.session.commit()
+        if p['name'] not in existing_names:
+            db.session.add(Place(**p))
+            added = True
+    if added:
+        db.session.commit()
