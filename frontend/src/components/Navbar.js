@@ -7,6 +7,7 @@ const links = [
   { to: "/places", label: "Mekanlar" },
   { to: "/map", label: "Harita" },
   { to: "/activity", label: "Aktiviteler" },
+  { to: "/social", label: "Sosyal" },
   { to: "/ai", label: "AI Rota" },
   { to: "/profile", label: "Profil" },
 ];

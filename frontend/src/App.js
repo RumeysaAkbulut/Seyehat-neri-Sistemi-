@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import PlaceDetail from "./pages/PlaceDetail";
 import SharedRoute from "./pages/SharedRoute";
 import Activity from "./pages/Activity";
+import Social from "./pages/Social";
 import Navbar from "./components/Navbar";
 
 function PrivateRoute({ children }) {
@@ -35,6 +36,7 @@ function AppRoutes() {
         <Route path="/collections" element={<PrivateRoute><Navigate to="/profile?tab=collections" replace /></PrivateRoute>} />
         <Route path="/share/route/:token" element={<SharedRoute />} />
         <Route path="/activity" element={<PrivateRoute><Activity /></PrivateRoute>} />
+        <Route path="/social" element={<PrivateRoute><Social /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

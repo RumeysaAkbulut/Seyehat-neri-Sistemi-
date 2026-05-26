@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { t } from "../theme";
 
 const HISTORY_KEY = "ai_recommendation_history";
 
@@ -24,7 +25,11 @@ function nearestNeighbourSort(points) {
 
 const CITIES = ["İstanbul", "Ankara", "İzmir", "Antalya", "Kapadokya", "Pamukkale", "Bursa", "Trabzon", "Bodrum", "Mardin"];
 const DURATION_PRESETS = ["1 gün", "2 gün", "3 gün", "5 gün", "1 hafta", "2 hafta"];
-const BUDGETS = ["düşük", "orta", "yüksek"];
+const BUDGETS = [
+  { key: "düşük",  label: "Düşük",   color: t.primary, bg: t.primaryLight, border: t.border },
+  { key: "orta",   label: "Orta",    color: t.amber,   bg: t.amberLight,   border: t.amberBorder },
+  { key: "yüksek", label: "Yüksek",  color: t.purple,  bg: t.purpleLight,  border: t.purpleBorder },
+];
 const INTERESTS = ["Tarih & Kültür", "Doğa & Macera", "Yeme & İçme", "Alışveriş", "Sanat & Müze", "Gece Hayatı"];
 
 export default function AIRecommend() {
@@ -105,7 +110,7 @@ export default function AIRecommend() {
       const isQuota = e.response?.status === 429 || e.response?.data?.quota_exceeded;
       setError(
         isQuota
-          ? "⚠️ Günlük AI kotası doldu. Birkaç dakika bekleyip tekrar dene veya yarın tekrar gel."
+          ? "Günlük AI kotası doldu. Birkaç dakika bekleyip tekrar dene veya yarın tekrar gel."
           : (e.response?.data?.error || "AI servisi şu an kullanılamıyor.")
       );
     } finally {
@@ -116,7 +121,7 @@ export default function AIRecommend() {
   const showOnMap = async () => {
     if (!aiPlaces.length) return;
     setMapLoading(true);
-    setMapMsg("⏳ Şehir merkezi alınıyor...");
+    setMapMsg("Şehir merkezi alınıyor...");
     const finalCity = customCity.trim() || city;
     const waypoints = [];
 
@@ -199,7 +204,7 @@ export default function AIRecommend() {
     // ── 1. Her mekan için ara ──
     for (let i = 0; i < aiPlaces.length; i++) {
       const place = aiPlaces[i];
-      setMapMsg(`⏳ ${i + 1}/${aiPlaces.length}: "${place.name}" aranıyor...`);
+      setMapMsg(`${i + 1}/${aiPlaces.length}: "${place.name}" aranıyor...`);
       try {
         const coords = await findPlace(place.name);
         if (coords) {
@@ -211,12 +216,12 @@ export default function AIRecommend() {
     setMapLoading(false);
 
     if (waypoints.length === 0) {
-      setMapMsg("❌ Hiçbir mekan konumlandırılamadı. Lütfen birkaç dakika bekleyip tekrar deneyin.");
+      setMapMsg("Hiçbir mekan konumlandırılamadı. Lütfen birkaç dakika bekleyip tekrar deneyin.");
       return;
     }
 
     const optimized = nearestNeighbourSort(waypoints);
-    setMapMsg(`✅ ${optimized.length}/${aiPlaces.length} mekan bulundu — optimize edildi, haritaya aktarılıyor...`);
+    setMapMsg(`${optimized.length}/${aiPlaces.length} mekan bulundu — optimize edildi, haritaya aktarılıyor...`);
 
     localStorage.setItem("load_route", JSON.stringify({
       id: `ai-${Date.now()}`,
@@ -263,10 +268,14 @@ export default function AIRecommend() {
       <div style={s.left}>
         <div style={s.header}>
           <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-            <div style={s.icon}>✨</div>
+            <div style={s.iconBox}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.purple} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
             {history.length > 0 && (
               <button style={s.historyToggleBtn} onClick={() => setShowHistory(v => !v)}>
-                📜 Geçmiş ({history.length})
+                Geçmiş ({history.length})
               </button>
             )}
           </div>
@@ -281,12 +290,12 @@ export default function AIRecommend() {
             {history.map(item => (
               <div key={item.id} style={s.historyItem}>
                 <div style={s.historyItemInfo}>
-                  <div style={s.historyCity}>📍 {item.city}</div>
+                  <div style={s.historyCity}>{item.city}</div>
                   <div style={s.historyMeta}>{item.duration} · {item.budget} bütçe · {new Date(item.savedAt).toLocaleDateString("tr-TR")}</div>
                 </div>
                 <div style={s.historyBtns}>
-                  <button style={s.loadHistBtn} onClick={() => loadHistoryItem(item)}>↩ Yükle</button>
-                  <button style={s.delHistBtn} onClick={() => deleteHistoryItem(item.id)}>🗑️</button>
+                  <button style={s.loadHistBtn} onClick={() => loadHistoryItem(item)}>Yükle</button>
+                  <button style={s.delHistBtn} onClick={() => deleteHistoryItem(item.id)}>×</button>
                 </div>
               </div>
             ))}
@@ -324,7 +333,7 @@ export default function AIRecommend() {
               )}
             </div>
             {customCity.trim() && (
-              <div style={s.citySelectedBadge}>✅ Seçili şehir: <strong>{customCity.trim()}</strong></div>
+              <div style={s.citySelectedBadge}>Seçili şehir: <strong>{customCity.trim()}</strong></div>
             )}
           </div>
 
@@ -367,11 +376,21 @@ export default function AIRecommend() {
           <div style={s.field}>
             <label style={s.label}>Bütçe</label>
             <div style={s.row}>
-              {BUDGETS.map(b => (
-                <button key={b} style={{...s.optBtn, ...(budget === b ? s.chipActive : {})}} onClick={() => setBudget(b)}>
-                  {b === "düşük" ? "💰 Düşük" : b === "orta" ? "💳 Orta" : "💎 Yüksek"}
-                </button>
-              ))}
+              {BUDGETS.map(b => {
+                const isActive = budget === b.key;
+                return (
+                  <button
+                    key={b.key}
+                    style={{
+                      ...s.optBtn,
+                      ...(isActive ? { background: b.bg, color: b.color, borderColor: b.border, fontWeight: 700 } : {}),
+                    }}
+                    onClick={() => setBudget(b.key)}
+                  >
+                    {b.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -389,7 +408,13 @@ export default function AIRecommend() {
           {error && <div style={s.error}>{error}</div>}
 
           <button style={{...s.submitBtn, ...(loading ? s.submitDisabled : {})}} onClick={handleSubmit} disabled={loading}>
-            {loading ? "⏳ Rota hazırlanıyor..." : "✨ Rota Öner"}
+            {loading
+              ? <span style={{display:"flex", alignItems:"center", justifyContent:"center", gap:"8px"}}>
+                  <span style={s.btnSpinner} />
+                  Rota hazırlanıyor...
+                </span>
+              : "Rota Öner"
+            }
           </button>
         </div>
       </div>
@@ -397,31 +422,41 @@ export default function AIRecommend() {
       <div style={s.right}>
         {!result && !loading && (
           <div style={s.placeholder}>
-            <div style={s.placeholderIcon}>🗺️</div>
+            <div style={s.placeholderIconBox}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={t.textLight} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+                <line x1="8" y1="2" x2="8" y2="18"/>
+                <line x1="16" y1="6" x2="16" y2="22"/>
+              </svg>
+            </div>
             <div style={s.placeholderText}>Formu doldurup "Rota Öner"e tıkla,<br />AI sana özel bir gezi planı hazırlasın.</div>
           </div>
         )}
         {loading && (
           <div style={s.placeholder}>
-            <div style={{...s.placeholderIcon, animation:"pulse 1.5s infinite"}}>✨</div>
+            <div style={s.loadingSpinner} />
             <div style={s.placeholderText}>AI rotanı hazırlıyor...</div>
           </div>
         )}
         {result && (
           <div style={s.result}>
             <div style={s.resultHeader}>
-              <span style={s.resultIcon}>✈️</span>
+              <div style={s.resultIconBox}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </div>
               <span style={s.resultTitle}>Gezi Planın Hazır!</span>
               <div style={{marginLeft:"auto", display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap"}}>
-                {savedMsg && <span style={s.savedBadge}>✅ {savedMsg}</span>}
-                <button style={s.saveResultBtn} onClick={saveRecommendation}>💾 Kaydet</button>
+                {savedMsg && <span style={s.savedBadge}>{savedMsg}</span>}
+                <button style={s.saveResultBtn} onClick={saveRecommendation}>Kaydet</button>
                 {aiPlaces.length > 0 && (
                   <button
                     style={{...s.mapResultBtn, ...(mapLoading ? {opacity:0.7} : {})}}
                     onClick={showOnMap}
                     disabled={mapLoading}
                   >
-                    {mapLoading ? "⏳ Yerler aranıyor..." : "🗺️ Haritada Göster"}
+                    {mapLoading ? "Yerler aranıyor..." : "Haritada Göster"}
                   </button>
                 )}
               </div>
@@ -447,63 +482,69 @@ export default function AIRecommend() {
 }
 
 const s = {
-  page: { display:"flex", minHeight:"calc(100vh - 58px)", fontFamily:"system-ui,sans-serif" },
-  left: { width:"380px", flexShrink:0, background:"#fff", borderRight:"1px solid #e1f0e8", padding:"2rem", overflowY:"auto" },
-  right: { flex:1, background:"#f2f8f5", padding:"2rem", overflowY:"auto" },
+  page: { display:"flex", minHeight:"calc(100vh - 58px)", fontFamily: t.font },
+  left: { width:"380px", flexShrink:0, background:"#fff", borderRight:`1px solid ${t.borderLight}`, padding:"2rem", overflowY:"auto" },
+  right: { flex:1, background:t.bg, padding:"2rem", overflowY:"auto" },
   header: { marginBottom:"1.75rem" },
-  icon: { fontSize:"32px", marginBottom:"8px" },
-  title: { fontSize:"22px", fontWeight:700, color:"#1a2e25", margin:"0 0 6px" },
-  sub: { fontSize:"13px", color:"#4a7a62", lineHeight:1.5 },
+  iconBox: { width:"40px", height:"40px", borderRadius:"10px", background:t.purpleLight, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"12px" },
+  title: { fontSize:"22px", fontWeight:700, color:t.text, margin:"0 0 6px", fontFamily:t.font },
+  sub: { fontSize:"13px", color:t.textMuted, lineHeight:1.5 },
   form: { display:"flex", flexDirection:"column", gap:"1.25rem" },
   field: { display:"flex", flexDirection:"column", gap:"8px" },
-  label: { fontSize:"12px", fontWeight:600, color:"#4a7a62", textTransform:"uppercase", letterSpacing:"0.5px" },
+  label: { fontSize:"12px", fontWeight:600, color:t.textMuted, textTransform:"uppercase", letterSpacing:"0.5px" },
   cityGrid: { display:"flex", flexWrap:"wrap", gap:"6px" },
-  cityChip: { padding:"6px 12px", borderRadius:"8px", border:"1px solid #a8d4bc", background:"#fff", fontSize:"12px", color:"#4a7a62", cursor:"pointer" },
+  cityChip: { padding:"6px 12px", borderRadius:"8px", border:`1px solid ${t.border}`, background:"#fff", fontSize:"12px", color:t.textMuted, cursor:"pointer", fontFamily:t.font },
   row: { display:"flex", flexWrap:"wrap", gap:"6px" },
-  optBtn: { padding:"7px 14px", borderRadius:"8px", border:"1px solid #a8d4bc", background:"#fff", fontSize:"12px", color:"#4a7a62", cursor:"pointer" },
-  chipActive: { background:"#0f6e56", color:"#fff", borderColor:"#0f6e56" },
-  input: { padding:"9px 12px", borderRadius:"10px", border:"1px solid #a8d4bc", fontSize:"13px", outline:"none", background:"#f5faf7", flex:1 },
-  inputActive: { border:"2px solid #0f6e56", background:"#f0fdf8", fontWeight:600, color:"#1a2e25" },
+  optBtn: { padding:"7px 14px", borderRadius:"8px", border:`1px solid ${t.border}`, background:"#fff", fontSize:"12px", color:t.textMuted, cursor:"pointer", fontFamily:t.font, transition:"all 0.15s" },
+  chipActive: { background:t.primary, color:"#fff", borderColor:t.primary },
+  input: { padding:"9px 12px", borderRadius:"10px", border:`1px solid ${t.border}`, fontSize:"13px", outline:"none", background:"#f5faf7", flex:1, fontFamily:t.font },
+  inputActive: { border:`2px solid ${t.primary}`, background:"#f0fdf8", fontWeight:600, color:t.text },
   customCityRow: { display:"flex", alignItems:"center", gap:"6px" },
-  clearCityBtn: { padding:"8px 10px", borderRadius:"9px", border:"1px solid #d0e8dc", background:"#fff", color:"#4a7a62", fontSize:"14px", cursor:"pointer", lineHeight:1, flexShrink:0 },
-  citySelectedBadge: { fontSize:"12px", color:"#0f6e56", background:"#e6f7f0", padding:"5px 10px", borderRadius:"8px", border:"1px solid #a8d4bc" },
+  clearCityBtn: { padding:"8px 10px", borderRadius:"9px", border:`1px solid ${t.border}`, background:"#fff", color:t.textMuted, fontSize:"14px", cursor:"pointer", lineHeight:1, flexShrink:0 },
+  citySelectedBadge: { fontSize:"12px", color:t.primary, background:t.primaryLight, padding:"5px 10px", borderRadius:"8px", border:`1px solid ${t.border}` },
   chipDimmed: { opacity:0.4 },
 
-  stepperRow: { display:"flex", alignItems:"center", gap:"6px", background:"#f5faf7", borderRadius:"10px", padding:"8px 12px", border:"1px solid #d0e8dc", flexWrap:"wrap" },
-  stepperLabel: { fontSize:"11px", fontWeight:600, color:"#4a7a62", textTransform:"uppercase", letterSpacing:"0.4px", marginRight:"4px" },
-  stepperBtn: { width:"28px", height:"28px", borderRadius:"7px", border:"1px solid #a8d4bc", background:"#fff", color:"#0f6e56", fontSize:"16px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 },
-  stepperVal: { minWidth:"24px", textAlign:"center", fontSize:"16px", fontWeight:700, color:"#1a2e25" },
-  unitToggle: { display:"flex", borderRadius:"7px", overflow:"hidden", border:"1px solid #a8d4bc" },
-  unitBtn: { padding:"5px 10px", border:"none", background:"#fff", fontSize:"12px", fontWeight:600, color:"#4a7a62", cursor:"pointer" },
-  unitBtnActive: { background:"#0f6e56", color:"#fff" },
-  stepperCurrent: { fontSize:"12px", color:"#0f6e56", marginLeft:"4px" },
+  stepperRow: { display:"flex", alignItems:"center", gap:"6px", background:"#f5faf7", borderRadius:"10px", padding:"8px 12px", border:`1px solid ${t.border}`, flexWrap:"wrap" },
+  stepperLabel: { fontSize:"11px", fontWeight:600, color:t.textMuted, textTransform:"uppercase", letterSpacing:"0.4px", marginRight:"4px" },
+  stepperBtn: { width:"28px", height:"28px", borderRadius:"7px", border:`1px solid ${t.border}`, background:"#fff", color:t.primary, fontSize:"16px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, padding:0 },
+  stepperVal: { minWidth:"24px", textAlign:"center", fontSize:"16px", fontWeight:700, color:t.text },
+  unitToggle: { display:"flex", borderRadius:"7px", overflow:"hidden", border:`1px solid ${t.border}` },
+  unitBtn: { padding:"5px 10px", border:"none", background:"#fff", fontSize:"12px", fontWeight:600, color:t.textMuted, cursor:"pointer" },
+  unitBtnActive: { background:t.primary, color:"#fff" },
+  stepperCurrent: { fontSize:"12px", color:t.primary, marginLeft:"4px" },
   error: { padding:"10px 14px", borderRadius:"10px", background:"#fef2f2", border:"1px solid #fca5a5", color:"#dc2626", fontSize:"13px" },
-  submitBtn: { padding:"13px", borderRadius:"12px", border:"none", background:"linear-gradient(135deg,#0f6e56,#1d9e75)", color:"#fff", fontSize:"14px", fontWeight:600, cursor:"pointer" },
+  submitBtn: { padding:"13px", borderRadius:"12px", border:"none", background:t.gradient, color:"#fff", fontSize:"14px", fontWeight:600, cursor:"pointer", fontFamily:t.font },
   submitDisabled: { opacity:0.6, cursor:"not-allowed" },
+  btnSpinner: { display:"inline-block", width:"14px", height:"14px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.4)", borderTop:"2px solid #fff", animation:"spin 0.7s linear infinite", flexShrink:0 },
+
   placeholder: { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", minHeight:"400px", gap:"16px" },
-  placeholderIcon: { fontSize:"56px" },
-  placeholderText: { fontSize:"14px", color:"#4a7a62", textAlign:"center", lineHeight:1.6 },
-  result: { background:"#fff", borderRadius:"16px", border:"1px solid #e1f0e8", overflow:"hidden" },
-  resultHeader: { background:"linear-gradient(135deg,#0f6e56,#1d9e75)", padding:"1.25rem 1.5rem", display:"flex", alignItems:"center", gap:"10px" },
-  resultIcon: { fontSize:"22px" },
-  resultTitle: { fontSize:"16px", fontWeight:600, color:"#fff" },
+  placeholderIconBox: { width:"80px", height:"80px", borderRadius:"50%", background:t.primaryLight, display:"flex", alignItems:"center", justifyContent:"center" },
+  placeholderText: { fontSize:"14px", color:t.textMuted, textAlign:"center", lineHeight:1.6 },
+  loadingSpinner: { width:"40px", height:"40px", borderRadius:"50%", border:`3px solid ${t.border}`, borderTop:`3px solid ${t.purple}`, animation:"spin 0.8s linear infinite" },
+
+  result: { background:"#fff", borderRadius:"16px", border:`1px solid ${t.borderLight}`, overflow:"hidden" },
+  resultHeader: { background:t.gradient, padding:"1.25rem 1.5rem", display:"flex", alignItems:"center", gap:"10px" },
+  resultIconBox: { width:"32px", height:"32px", borderRadius:"8px", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  resultTitle: { fontSize:"16px", fontWeight:600, color:"#fff", fontFamily:t.font },
   resultBody: { padding:"1.5rem" },
   line: { fontSize:"13px", color:"#2d4a3e", lineHeight:1.7, margin:"4px 0" },
-  numbered: { fontWeight:500, color:"#0f6e56" },
-  heading: { fontSize:"15px", fontWeight:700, color:"#1a2e25", marginTop:"12px" },
+  numbered: { fontWeight:500, color:t.primary },
+  heading: { fontSize:"15px", fontWeight:700, color:t.text, marginTop:"12px" },
   bold: { fontWeight:600 },
-  historyToggleBtn: { padding:"6px 12px", borderRadius:"8px", border:"1px solid #a8d4bc", background:"#fff", fontSize:"12px", fontWeight:600, color:"#0f6e56", cursor:"pointer" },
-  historyPanel: { background:"#f5faf7", borderRadius:"12px", border:"1px solid #d0e8dc", padding:"0.75rem", marginBottom:"1rem", display:"flex", flexDirection:"column", gap:"6px" },
-  historyTitle: { fontSize:"11px", fontWeight:700, color:"#4a7a62", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"4px" },
-  historyItem: { background:"#fff", borderRadius:"8px", border:"1px solid #e8f5ee", padding:"8px 10px", display:"flex", alignItems:"center", gap:"8px" },
+
+  historyToggleBtn: { padding:"6px 12px", borderRadius:"8px", border:`1px solid ${t.border}`, background:"#fff", fontSize:"12px", fontWeight:600, color:t.primary, cursor:"pointer", fontFamily:t.font },
+  historyPanel: { background:"#f5faf7", borderRadius:"12px", border:`1px solid ${t.border}`, padding:"0.75rem", marginBottom:"1rem", display:"flex", flexDirection:"column", gap:"6px" },
+  historyTitle: { fontSize:"11px", fontWeight:700, color:t.textMuted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"4px" },
+  historyItem: { background:"#fff", borderRadius:"8px", border:`1px solid ${t.borderLight}`, padding:"8px 10px", display:"flex", alignItems:"center", gap:"8px" },
   historyItemInfo: { flex:1, overflow:"hidden" },
-  historyCity: { fontSize:"12px", fontWeight:700, color:"#1a2e25" },
-  historyMeta: { fontSize:"11px", color:"#4a7a62", marginTop:"2px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" },
+  historyCity: { fontSize:"12px", fontWeight:700, color:t.text },
+  historyMeta: { fontSize:"11px", color:t.textMuted, marginTop:"2px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" },
   historyBtns: { display:"flex", gap:"4px", flexShrink:0 },
-  loadHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #0f6e56", background:"#e6f7f0", color:"#0f6e56", fontSize:"10px", fontWeight:600, cursor:"pointer" },
-  delHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #fecaca", background:"transparent", color:"#EF4444", fontSize:"10px", cursor:"pointer" },
-  saveResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.2)", color:"#fff", fontSize:"12px", fontWeight:600, cursor:"pointer", backdropFilter:"blur(4px)" },
-  mapResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.9)", color:"#0f6e56", fontSize:"12px", fontWeight:700, cursor:"pointer" },
-  mapMsgBar: { padding:"8px 1.5rem", fontSize:"12px", fontWeight:500, color:"#0f6e56", background:"#e6f7f0", borderBottom:"1px solid #a8d4bc" },
+  loadHistBtn: { padding:"4px 10px", borderRadius:"6px", border:`1px solid ${t.primary}`, background:t.primaryLight, color:t.primary, fontSize:"10px", fontWeight:600, cursor:"pointer" },
+  delHistBtn: { padding:"4px 8px", borderRadius:"6px", border:"1px solid #fecaca", background:"transparent", color:"#EF4444", fontSize:"14px", fontWeight:700, cursor:"pointer", lineHeight:1 },
+
+  saveResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.2)", color:"#fff", fontSize:"12px", fontWeight:600, cursor:"pointer", backdropFilter:"blur(4px)", fontFamily:t.font },
+  mapResultBtn: { padding:"6px 14px", borderRadius:"8px", border:"none", background:"rgba(255,255,255,0.9)", color:t.primary, fontSize:"12px", fontWeight:700, cursor:"pointer", fontFamily:t.font },
+  mapMsgBar: { padding:"8px 1.5rem", fontSize:"12px", fontWeight:500, color:t.primary, background:t.primaryLight, borderBottom:`1px solid ${t.border}` },
   savedBadge: { fontSize:"12px", color:"#d1fae5", fontWeight:500 },
 };

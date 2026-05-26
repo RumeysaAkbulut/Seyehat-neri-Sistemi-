@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents 
 import L from "leaflet";
 import axios from "axios";
 import "leaflet/dist/leaflet.css";
+import "leaflet.heat";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
 
@@ -39,7 +40,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Wikipedia'dan fotoğraf çek (isim bazlı)
+// Wikipedia'dan fotoğraf çek (isim bazlı) — popup önizlemesi için
 async function fetchWikiImage(name) {
   try {
     const s = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(name)}&format=json&origin=*&srlimit=1`);
@@ -61,6 +62,41 @@ async function fetchWikiImage(name) {
     const p = Object.values(id?.query?.pages || {})[0];
     return p?.thumbnail?.source || null;
   } catch { return null; }
+}
+
+/**
+ * Wikipedia'dan hem fotoğraf hem açıklama çek (tek API çağrısı per dil).
+ * Mekanları listeye eklerken kullanılır.
+ * @returns {{ image: string|null, description: string|null }}
+ */
+async function fetchWikiData(name) {
+  const tryWiki = async (base) => {
+    try {
+      const sr = await fetch(
+        `${base}?action=query&list=search&srsearch=${encodeURIComponent(name)}&format=json&origin=*&srlimit=1`
+      );
+      const sd = await sr.json();
+      const title = sd?.query?.search?.[0]?.title;
+      if (!title) return null;
+      // pageimages + extracts tek seferde
+      const dr = await fetch(
+        `${base}?action=query&titles=${encodeURIComponent(title)}&prop=pageimages|extracts&exintro=true&exsentences=4&explaintext=true&pithumbsize=640&format=json&origin=*`
+      );
+      const dd = await dr.json();
+      const page = Object.values(dd?.query?.pages || {})[0];
+      if (!page || page.missing !== undefined) return null;
+      return {
+        image: page?.thumbnail?.source || null,
+        description: page?.extract?.trim() || null,
+      };
+    } catch { return null; }
+  };
+
+  // Önce İngilizce, sonra Türkçe
+  const en = await tryWiki("https://en.wikipedia.org/w/api.php");
+  if (en?.image || en?.description) return en;
+  const tr = await tryWiki("https://tr.wikipedia.org/w/api.php");
+  return tr || { image: null, description: null };
 }
 
 // Overpass API — birden fazla sunucuyla fallback + timeout
@@ -145,6 +181,32 @@ function MapClickHandler({ onMapClick }) {
   useMapEvents({
     click(e) { onMapClick(e.latlng); }
   });
+  return null;
+}
+
+/**
+ * Yoğunluk Haritası (Heatmap) Katmanı
+ * points: [[lat, lon, intensity], ...] formatında dizi
+ */
+function HeatmapLayer({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!points || points.length === 0) return;
+    const heat = L.heatLayer(points, {
+      radius: 35,
+      blur: 28,
+      maxZoom: 17,
+      max: 1.0,
+      gradient: {
+        0.1: "#3b82f6",   // mavi  – seyrek
+        0.35: "#10b981",  // yeşil – az yoğun
+        0.6: "#f59e0b",   // turuncu – orta yoğun
+        0.82: "#ef4444",  // kırmızı – yoğun
+        1.0: "#7c3aed",   // mor – çok yoğun
+      },
+    }).addTo(map);
+    return () => { map.removeLayer(heat); };
+  }, [map, points]);
   return null;
 }
 
@@ -253,6 +315,7 @@ export default function MapPage() {
   const [routeGeometry, setRouteGeometry] = useState([]); // OSRM'den gelen gerçek yol koordinatları
   const [routingLoading, setRoutingLoading] = useState(false);
   const [travelMode, setTravelMode] = useState('driving'); // 'driving' | 'walking' | 'cycling'
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const pinCountRef = useRef(0);
   const routingTimerRef = useRef(null);
 
@@ -424,15 +487,18 @@ export default function MapPage() {
   const addToPlaces = async (poi) => {
     setAddingId(poi.id);
     try {
+      // Wikipedia'dan fotoğraf + açıklama çek (paralel'de başlar, await ile bekle)
+      const wikiData = await fetchWikiData(poi.tags.name);
+
       const payload = {
         name: poi.tags.name,
-        city: cityQuery,
+        city: poi.tags["addr:city"] || cityQuery,
         category: osmTagToCategory(poi.tags),
-        description: poi.tags["description"] || poi.tags["wikipedia"] || "",
+        description: poi.tags["description"] || wikiData.description || poi.tags["wikipedia"] || "",
         latitude: poi.lat,
         longitude: poi.lon,
         rating: 0,
-        image_url: null,
+        image_url: wikiData.image || null,
       };
       await axios.post("http://localhost:5001/api/places/", payload, authHeader);
       setAddedIds(prev => new Set([...prev, poi.id]));
@@ -488,6 +554,36 @@ export default function MapPage() {
               >🛰️</button>
             </div>
           </div>
+
+          {/* Yoğunluk haritası toggle */}
+          <button
+            style={{
+              ...s.heatmapToggleBtn,
+              ...(showHeatmap ? s.heatmapToggleBtnActive : {}),
+              ...(pois.length === 0 ? { opacity: 0.45, cursor: "not-allowed" } : {}),
+            }}
+            onClick={() => pois.length > 0 && setShowHeatmap(v => !v)}
+            title={pois.length === 0 ? "Önce bir şehir ara" : (showHeatmap ? "Yoğunluk haritasını gizle" : "Yoğunluk haritasını göster")}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+            {showHeatmap ? "Yoğunluk Açık" : "Yoğunluk Haritası"}
+          </button>
+
+          {/* Renk skalası — sadece heatmap açıkken göster */}
+          {showHeatmap && pois.length > 0 && (
+            <div style={s.heatLegend}>
+              <div style={s.heatLegendBar} />
+              <div style={s.heatLegendLabels}>
+                <span>Seyrek</span>
+                <span>Orta</span>
+                <span>Yoğun</span>
+              </div>
+            </div>
+          )}
 
           {/* Ulaşım modu */}
           <div style={s.modeRow}>
@@ -667,6 +763,11 @@ export default function MapPage() {
           )}
           <FlyTo center={mapCenter} zoom={mapZoom} />
           <MapClickHandler onMapClick={handleMapClick} />
+
+          {/* Yoğunluk haritası katmanı */}
+          {showHeatmap && pois.length > 0 && (
+            <HeatmapLayer points={pois.map(p => [p.lat, p.lon, 0.8])} />
+          )}
 
           {/* Kullanıcının tıkladığı özel pinler */}
           {customPins.map(pin => {
@@ -849,4 +950,11 @@ const s = {
   routingBadge: { display: "inline-block", marginLeft: "6px", fontSize: "10px", color: "#D97706", background: "#FFFBEB", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 },
   routedBadge: { display: "inline-block", marginLeft: "6px", fontSize: "10px", color: t.primary, background: t.primaryLight, padding: "2px 6px", borderRadius: "6px", fontWeight: 600 },
   mapWrap: { flex: 1, position: "relative" },
+
+  // Yoğunluk haritası
+  heatmapToggleBtn: { display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", width: "100%", padding: "7px 10px", borderRadius: "9px", border: `1.5px solid ${t.border}`, background: "#fff", fontSize: "12px", fontWeight: 600, color: t.textMuted, cursor: "pointer", transition: "all 0.15s", boxSizing: "border-box" },
+  heatmapToggleBtnActive: { background: "#f5f3ff", color: "#7c3aed", borderColor: "#c4b5fd" },
+  heatLegend: { marginTop: "8px" },
+  heatLegendBar: { height: "8px", borderRadius: "4px", background: "linear-gradient(to right, #3b82f6, #10b981, #f59e0b, #ef4444, #7c3aed)", marginBottom: "4px" },
+  heatLegendLabels: { display: "flex", justifyContent: "space-between", fontSize: "10px", color: t.textMuted },
 };
