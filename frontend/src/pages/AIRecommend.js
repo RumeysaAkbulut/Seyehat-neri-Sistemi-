@@ -232,19 +232,43 @@ export default function AIRecommend() {
     setTimeout(() => navigate("/map"), 800);
   };
 
-  const saveRecommendation = () => {
+  const saveRecommendation = async () => {
     if (!result || !currentMeta) return;
+
+    // 1) AI geçmişine kaydet (localStorage)
     const entry = {
       id: Date.now(),
       ...currentMeta,
       content: result,
       savedAt: new Date().toISOString(),
     };
-    const updated = [entry, ...history].slice(0, 20); // max 20 kayıt
+    const updated = [entry, ...history].slice(0, 20);
     setHistory(updated);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    setSavedMsg("Öneri kaydedildi!");
-    setTimeout(() => setSavedMsg(""), 2500);
+
+    // 2) Backend'e rota olarak kaydet — Rotalar sayfasında görünsün
+    try {
+      const finalCity = customCity.trim() || city;
+      const waypoints = (aiPlaces || []).map(p => ({
+        name: p.name,
+        lat: 0,
+        lng: 0,
+        duration: p.duration || null,
+      }));
+      await axios.post(
+        "http://localhost:5001/api/routes/",
+        {
+          name: `AI Rotası: ${finalCity} (${currentMeta.duration})`,
+          description: result.substring(0, 300),
+          waypoints,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSavedMsg("Öneri ve rota kaydedildi! ✓");
+    } catch {
+      setSavedMsg("Öneri kaydedildi! (Rota kaydı başarısız)");
+    }
+    setTimeout(() => setSavedMsg(""), 3000);
   };
 
   const loadHistoryItem = (item) => {
