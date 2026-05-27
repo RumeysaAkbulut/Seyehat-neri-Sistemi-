@@ -10,22 +10,24 @@ ai_bp = Blueprint('ai', __name__, url_prefix='/api/ai')
 
 # Öncelik sırası: daha hafif modeller daha yüksek kotaya sahip olabilir
 FALLBACK_MODELS = [
-    'gemini-2.0-flash',        # Ana model
-    'gemini-2.0-flash-lite',   # Daha hafif, ayrı kota
-    'gemini-2.5-flash-lite',   # Daha yeni lite
+    'gemini-2.0-flash-lite',   # En yüksek ücretsiz kota (30 RPM)
+    'gemini-2.0-flash',        # Ana model (15 RPM)
+    'gemini-2.5-flash-lite',   # Yeni lite
     'gemini-2.5-flash',        # En yeni flash
 ]
 
 def _is_quota_error(e):
-    """429 veya RESOURCE_EXHAUSTED hatası mı kontrol eder."""
+    """429/RESOURCE_EXHAUSTED veya 403/PERMISSION_DENIED (kota aşımı) kontrolü."""
     code = getattr(e, 'code', None)
     status = getattr(e, 'status', None)
+    msg = str(e).lower()
     return (
-        code == 429
-        or status == 'RESOURCE_EXHAUSTED'
-        or '429' in str(e)
-        or 'RESOURCE_EXHAUSTED' in str(e)
-        or 'quota' in str(e).lower()
+        code in (429, 403)
+        or status in ('RESOURCE_EXHAUSTED', 'PERMISSION_DENIED')
+        or '429' in msg
+        or 'resource_exhausted' in msg
+        or 'quota' in msg
+        or 'permission_denied' in msg
     )
 
 def _try_generate(client, prompt):
