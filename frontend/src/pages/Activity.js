@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -128,7 +129,7 @@ export default function Activity() {
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
-    axios.get("http://localhost:5001/api/activity/", authHeader)
+    axios.get(`${API_URL}/api/activity/`, authHeader)
       .then(r => { setActivities(r.data.activities || []); setLoading(false); })
       .catch(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps

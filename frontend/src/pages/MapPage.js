@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from "react-leaflet";
@@ -324,7 +325,7 @@ export default function MapPage() {
   const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
-    axios.get("http://localhost:5001/api/routes/", authHeader)
+    axios.get(`${API_URL}/api/routes/`, authHeader)
       .then(r => setSavedRoutes(r.data.routes || []))
       .catch(() => {});
     // Rotalarım sayfasından "Haritada Aç" ile gelen rotayı yükle
@@ -376,7 +377,7 @@ export default function MapPage() {
       lat: p.lat, lng: p.lon, name: p.tags?.name || p.name || "Nokta",
     }));
     try {
-      const res = await axios.post("http://localhost:5001/api/routes/", { name: routeName.trim(), waypoints }, authHeader);
+      const res = await axios.post(`${API_URL}/api/routes/`, { name: routeName.trim(), waypoints }, authHeader);
       setSavedRoutes(prev => [res.data.route, ...prev]);
       setShowSaveModal(false);
       setRouteName("");
@@ -403,7 +404,7 @@ export default function MapPage() {
   const deleteSavedRoute = async (routeId) => {
     if (!window.confirm("Bu rota silinsin mi?")) return;
     try {
-      await axios.delete(`http://localhost:5001/api/routes/${routeId}`, authHeader);
+      await axios.delete(`${API_URL}/api/routes/${routeId}`, authHeader);
       setSavedRoutes(prev => prev.filter(r => r.id !== routeId));
     } catch { alert("Rota silinemedi."); }
   };
@@ -502,7 +503,7 @@ export default function MapPage() {
         rating: 0,
         image_url: wikiData.image || null,
       };
-      await axios.post("http://localhost:5001/api/places/", payload, authHeader);
+      await axios.post(`${API_URL}/api/places/`, payload, authHeader);
       setAddedIds(prev => new Set([...prev, poi.id]));
       setSuccessMsg(`"${poi.tags.name}" mekanlar listene eklendi!`);
       setTimeout(() => setSuccessMsg(""), 3000);

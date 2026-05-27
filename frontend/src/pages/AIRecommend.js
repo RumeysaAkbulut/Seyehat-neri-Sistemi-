@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -98,7 +99,7 @@ export default function AIRecommend() {
     setLoading(true);
     try {
       const res = await axios.post(
-        "http://localhost:5001/api/ai/recommend",
+        `${API_URL}/api/ai/recommend`,
         { city: finalCity, interests: selectedInterests.join(", "), duration, budget },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -256,7 +257,7 @@ export default function AIRecommend() {
         duration: p.duration || null,
       }));
       await axios.post(
-        "http://localhost:5001/api/routes/",
+        `${API_URL}/api/routes/`,
         {
           name: `AI Rotası: ${finalCity} (${currentMeta.duration})`,
           description: result.substring(0, 300),

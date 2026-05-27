@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -5,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import RoutesTab from "./Routes";
 import CollectionsTab from "./Collections";
 
-const API = "http://localhost:5001";
+const API = `${API_URL}`;
 
 const TABS = [
   { key: "profile",     label: "Profil" },

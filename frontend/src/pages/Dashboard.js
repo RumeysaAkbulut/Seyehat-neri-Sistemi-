@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
@@ -73,7 +74,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!token) return;
-    axios.get("http://localhost:5001/api/stats", {
+    axios.get(`${API_URL}/api/stats`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(r => setStats(r.data)).catch(() => {});
   }, [token]);

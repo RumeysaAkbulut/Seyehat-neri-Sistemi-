@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
@@ -36,7 +37,7 @@ export default function SharedRoute() {
   const [routeGeometry, setRouteGeometry] = useState([]);
 
   useEffect(() => {
-    axios.get(`http://localhost:5001/api/share/route/${token}`)
+    axios.get(`${API_URL}/api/share/route/${token}`)
       .then(async r => {
         const routeData = r.data.route;
         setRoute(routeData);

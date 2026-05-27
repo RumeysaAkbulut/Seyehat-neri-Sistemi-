@@ -1,9 +1,10 @@
+import API_URL from '../api';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
-const API = "http://localhost:5001";
+const API = `${API_URL}`;
 
 export default function Routes() {
   const { token } = useAuth();

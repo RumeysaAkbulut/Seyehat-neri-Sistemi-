@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -46,7 +47,7 @@ export default function PlaceDetail() {
 
       // Her zaman backend'den çek
       try {
-        const res = await axios.get(`http://localhost:5001/api/places/${id}`, authHeader);
+        const res = await axios.get(`${API_URL}/api/places/${id}`, authHeader);
         setPlace(res.data.place);
       } catch {
         setPlace(null);
@@ -56,19 +57,19 @@ export default function PlaceDetail() {
 
       // Favori durumu
       try {
-        const favRes = await axios.get("http://localhost:5001/api/favorites/", authHeader);
+        const favRes = await axios.get(`${API_URL}/api/favorites/`, authHeader);
         const favIds = new Set(favRes.data.favorites.map(f => f.place_id));
         setIsFav(favIds.has(numId));
       } catch { /* sessiz */ }
       // Yorumlar
       try {
-        const revRes = await axios.get(`http://localhost:5001/api/reviews/${id}`, authHeader);
+        const revRes = await axios.get(`${API_URL}/api/reviews/${id}`, authHeader);
         setReviews(revRes.data.reviews || []);
         setAvgRating(revRes.data.average_rating);
       } catch { /* sessiz */ }
       // Koleksiyonlar
       try {
-        const colRes = await axios.get("http://localhost:5001/api/collections/", authHeader);
+        const colRes = await axios.get(`${API_URL}/api/collections/`, authHeader);
         setCollections(colRes.data.collections || []);
       } catch { /* sessiz */ }
     };
@@ -80,7 +81,7 @@ export default function PlaceDetail() {
     if (!reviewComment.trim()) { setReviewError("Yorum metni boş olamaz."); return; }
     setReviewLoading(true); setReviewError("");
     try {
-      const res = await axios.post(`http://localhost:5001/api/reviews/${id}`,
+      const res = await axios.post(`${API_URL}/api/reviews/${id}`,
         { rating: reviewRating, comment: reviewComment.trim() }, authHeader);
       const updated = [res.data.review, ...reviews.filter(r => r.user_id !== res.data.review.user_id)];
       setReviews(updated);
@@ -92,7 +93,7 @@ export default function PlaceDetail() {
 
   const deleteReview = async (reviewId) => {
     try {
-      await axios.delete(`http://localhost:5001/api/reviews/${id}/${reviewId}`, authHeader);
+      await axios.delete(`${API_URL}/api/reviews/${id}/${reviewId}`, authHeader);
       const updated = reviews.filter(r => r.id !== reviewId);
       setReviews(updated);
       setAvgRating(updated.length ? parseFloat((updated.reduce((s, r) => s + r.rating, 0) / updated.length).toFixed(1)) : null);
@@ -103,10 +104,10 @@ export default function PlaceDetail() {
     setFavLoading(true);
     try {
       if (isFav) {
-        await axios.delete(`http://localhost:5001/api/favorites/${id}`, authHeader);
+        await axios.delete(`${API_URL}/api/favorites/${id}`, authHeader);
         setIsFav(false);
       } else {
-        await axios.post(`http://localhost:5001/api/favorites/${id}`, {}, authHeader);
+        await axios.post(`${API_URL}/api/favorites/${id}`, {}, authHeader);
         setIsFav(true);
       }
     } catch { /* sessiz */ }
@@ -115,7 +116,7 @@ export default function PlaceDetail() {
 
   const addToCollection = async (colId, colName) => {
     try {
-      await axios.post(`http://localhost:5001/api/collections/${colId}/items`,
+      await axios.post(`${API_URL}/api/collections/${colId}/items`,
         { place_id: numId }, authHeader);
       setColMsg(`✅ "${colName}" koleksiyonuna eklendi`);
       // place_ids'i güncelle

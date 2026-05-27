@@ -1,10 +1,11 @@
+import API_URL from '../api';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { t } from "../theme";
 
-const API = "http://localhost:5001/api";
+const API = `${API_URL}/api`;
 
 /* ─── Aktivite ikonu/meta (Activity.js ile aynı) ─────────────────────────── */
 const TYPE_META = {

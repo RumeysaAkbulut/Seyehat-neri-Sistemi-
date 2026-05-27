@@ -1,3 +1,4 @@
+import API_URL from '../api';
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -114,7 +115,7 @@ export default function Places() {
 
   useEffect(() => {
     // DB mekanlarını çek (review_avg dahil)
-    axios.get("http://localhost:5001/api/places/", authHeader)
+    axios.get(`${API_URL}/api/places/`, authHeader)
       .then(r => {
         const allPlaces = r.data.places || [];
         setPlaces(allPlaces);
@@ -126,7 +127,7 @@ export default function Places() {
         });
         setReviewStats(stats);
       }).catch(() => {});
-    axios.get("http://localhost:5001/api/favorites/", authHeader)
+    axios.get(`${API_URL}/api/favorites/`, authHeader)
       .then(r => setFavorites(new Set(r.data.favorites.map(f => f.place_id))))
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,10 +200,10 @@ export default function Places() {
     const isFav = favorites.has(place.id);
     try {
       if (isFav) {
-        await axios.delete(`http://localhost:5001/api/favorites/${place.id}`, authHeader);
+        await axios.delete(`${API_URL}/api/favorites/${place.id}`, authHeader);
         setFavorites(prev => { const s = new Set(prev); s.delete(place.id); return s; });
       } else {
-        await axios.post(`http://localhost:5001/api/favorites/${place.id}`, {}, authHeader);
+        await axios.post(`${API_URL}/api/favorites/${place.id}`, {}, authHeader);
         setFavorites(prev => new Set([...prev, place.id]));
       }
     } catch (e) {
@@ -237,10 +238,10 @@ export default function Places() {
     };
     try {
       if (editingId) {
-        const res = await axios.put(`http://localhost:5001/api/places/${editingId}`, payload, authHeader);
+        const res = await axios.put(`${API_URL}/api/places/${editingId}`, payload, authHeader);
         setPlaces(prev => prev.map(p => p.id === editingId ? res.data.place : p));
       } else {
-        const res = await axios.post("http://localhost:5001/api/places/", payload, authHeader);
+        const res = await axios.post(`${API_URL}/api/places/`, payload, authHeader);
         setPlaces(prev => [...prev, res.data.place]);
       }
       setShowModal(false);
@@ -252,7 +253,7 @@ export default function Places() {
   const handleDelete = async (place) => {
     if (!window.confirm(`"${place.name}" silinsin mi?`)) return;
     try {
-      await axios.delete(`http://localhost:5001/api/places/${place.id}`, authHeader);
+      await axios.delete(`${API_URL}/api/places/${place.id}`, authHeader);
       setPlaces(prev => prev.filter(p => p.id !== place.id));
     } catch (e) { alert(e.response?.data?.error || "Silinemedi."); }
   };
