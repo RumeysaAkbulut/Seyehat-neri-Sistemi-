@@ -60,7 +60,7 @@ class FriendshipRepository:
         return result
 
     def get_user_routes(self, user_id):
-        """Bir kullanıcının kaydettiği rotaları döndür."""
+        """Bir kullanıcının kaydettiği rotaları waypoint'leriyle döndür."""
         routes = (Route.query
                   .filter_by(user_id=user_id)
                   .order_by(Route.created_at.desc()).all())
@@ -68,6 +68,7 @@ class FriendshipRepository:
             'id': r.id,
             'name': r.name,
             'description': r.description or '',
+            'waypoints': r.get_waypoints(),
             'waypoint_count': len(r.get_waypoints()),
             'created_at': r.created_at.isoformat(),
         } for r in routes]

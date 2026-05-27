@@ -214,21 +214,37 @@ function UserProfile({ user, token, navigate, onClose }) {
         routes.length === 0
           ? <div style={sp.empty}>Henüz kaydettiği rota yok.</div>
           : <div style={sp.list}>
-              {routes.map(r => (
-                <div key={r.id} style={{...sp.item, cursor:"default"}}>
-                  <div style={{...sp.itemImg, background: t.primaryLight}}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/></svg>
-                  </div>
-                  <div style={sp.itemBody}>
-                    <div style={sp.itemName}>{r.name}</div>
-                    {r.description && <div style={sp.itemDesc}>{r.description}</div>}
-                    <div style={sp.itemMeta}>
-                      <span style={sp.catTag}>{r.waypoint_count} durak</span>
-                      <span style={{fontSize:"11px", color:t.textMuted}}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+              {routes.map(r => {
+                const hasCoords = (r.waypoints || []).some(w => w.lat && w.lng && (w.lat !== 0 || w.lng !== 0));
+                const handleRouteClick = () => {
+                  if (!hasCoords) return;
+                  localStorage.setItem("load_route", JSON.stringify({
+                    id: r.id,
+                    name: r.name,
+                    waypoints: r.waypoints,
+                  }));
+                  navigate("/map");
+                };
+                return (
+                  <div key={r.id} style={{...sp.item, cursor: hasCoords ? "pointer" : "default"}}
+                       onClick={handleRouteClick}
+                       title={hasCoords ? "Haritada göster" : "Bu rotanın koordinatları yok"}>
+                    <div style={{...sp.itemImg, background: t.primaryLight}}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/></svg>
                     </div>
+                    <div style={sp.itemBody}>
+                      <div style={sp.itemName}>{r.name}</div>
+                      {r.description && <div style={sp.itemDesc}>{r.description}</div>}
+                      <div style={sp.itemMeta}>
+                        <span style={sp.catTag}>{r.waypoint_count} durak</span>
+                        <span style={{fontSize:"11px", color:t.textMuted}}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+                        {hasCoords && <span style={{fontSize:"11px", color:t.primary, fontWeight:600}}>🗺️ Haritada gör</span>}
+                      </div>
+                    </div>
+                    {hasCoords && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
       )}
     </div>
