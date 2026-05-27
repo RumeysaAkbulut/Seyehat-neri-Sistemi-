@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import axios from "axios";
@@ -293,6 +294,7 @@ function PopupContent({ poi, isInRoute, isAdded, isAdding, onToggleRoute, onAdd 
 
 export default function MapPage() {
   const { token } = useAuth();
+  const location = useLocation();
   const [mapCenter, setMapCenter] = useState([39.0, 35.0]);
   const [mapZoom, setMapZoom] = useState(6);
   const [route, setRoute] = useState([]);
@@ -347,7 +349,7 @@ export default function MapPage() {
       localStorage.removeItem("load_route");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.key]);
 
   // Route veya ulaşım modu değişince OSRM'den gerçek yol geometrisini çek
   useEffect(() => {
