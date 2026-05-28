@@ -140,6 +140,7 @@ function UserProfile({ user, token, navigate, onClose }) {
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profTab, setProfTab] = useState("favorites");
+  const [detailRoute, setDetailRoute] = useState(null); // koordinatsız rota detay görünümü
 
   useEffect(() => {
     setLoading(true);
@@ -215,21 +216,53 @@ function UserProfile({ user, token, navigate, onClose }) {
         routes.length === 0
           ? <div style={sp.empty}>Henüz kaydettiği rota yok.</div>
           : <div style={sp.list}>
+
+              {/* Koordinatsız rota detay mini paneli */}
+              {detailRoute && (
+                <div style={sp.routeDetail}>
+                  <div style={sp.routeDetailHeader}>
+                    <span style={sp.routeDetailTitle}>{detailRoute.name}</span>
+                    <button style={sp.routeDetailClose} onClick={() => setDetailRoute(null)}>✕</button>
+                  </div>
+                  {detailRoute.description && (
+                    <div style={sp.routeDetailDesc}>{detailRoute.description}</div>
+                  )}
+                  <div style={sp.routeDetailInfo}>📍 {detailRoute.waypoint_count} durak · AI rotası (koordinatsız)</div>
+                  <div style={sp.routeDetailList}>
+                    {(detailRoute.waypoints || []).map((wp, i) => (
+                      <div key={i} style={sp.routeDetailItem}>
+                        <span style={sp.routeDetailNum}>{i + 1}</span>
+                        <span style={sp.routeDetailName}>{wp.name || "Mekan"}</span>
+                        {wp.duration && <span style={sp.routeDetailDur}>{wp.duration}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={sp.routeDetailNote}>
+                    ℹ️ Bu rotayı haritada görmek için kendi AI Rotaları sayfandan aynı şehir için oluştur.
+                  </div>
+                </div>
+              )}
+
               {routes.map(r => {
-                const hasCoords = (r.waypoints || []).some(w => w.lat && w.lng && (w.lat !== 0 || w.lng !== 0));
+                const hasCoords = (r.waypoints || []).some(w => (w.lat !== 0 || w.lng !== 0) && w.lat != null);
                 const handleRouteClick = () => {
-                  if (!hasCoords) return;
-                  localStorage.setItem("load_route", JSON.stringify({
-                    id: r.id,
-                    name: r.name,
-                    waypoints: r.waypoints,
-                  }));
-                  navigate("/map");
+                  if (hasCoords) {
+                    localStorage.setItem("load_route", JSON.stringify({
+                      id: r.id,
+                      name: r.name,
+                      waypoints: r.waypoints,
+                    }));
+                    navigate("/map");
+                  } else {
+                    // Koordinat yok — detay panelini göster
+                    setDetailRoute(detailRoute?.id === r.id ? null : r);
+                  }
                 };
+                const isSelected = detailRoute?.id === r.id;
                 return (
-                  <div key={r.id} style={{...sp.item, cursor: hasCoords ? "pointer" : "default"}}
-                       onClick={handleRouteClick}
-                       title={hasCoords ? "Haritada göster" : "Bu rotanın koordinatları yok"}>
+                  <div key={r.id}
+                       style={{...sp.item, cursor:"pointer", ...(isSelected ? {borderColor: t.primary, background: t.primaryLight} : {})}}
+                       onClick={handleRouteClick}>
                     <div style={{...sp.itemImg, background: t.primaryLight}}>
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/></svg>
                     </div>
@@ -239,10 +272,12 @@ function UserProfile({ user, token, navigate, onClose }) {
                       <div style={sp.itemMeta}>
                         <span style={sp.catTag}>{r.waypoint_count} durak</span>
                         <span style={{fontSize:"11px", color:t.textMuted}}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
-                        {hasCoords && <span style={{fontSize:"11px", color:t.primary, fontWeight:600}}>🗺️ Haritada gör</span>}
+                        {hasCoords
+                          ? <span style={{fontSize:"11px", color:t.primary, fontWeight:600}}>🗺️ Haritada gör</span>
+                          : <span style={{fontSize:"11px", color:t.amber, fontWeight:600}}>📋 Listeyi gör</span>}
                       </div>
                     </div>
-                    {hasCoords && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                   </div>
                 );
               })}
@@ -562,4 +597,18 @@ const sp = {
   cityTag: { fontSize: "11px", padding: "2px 7px", borderRadius: "6px", background: t.primaryLight, color: t.primary, fontWeight: 600 },
   catTag:  { fontSize: "11px", padding: "2px 7px", borderRadius: "6px", background: "#F1F5F9", color: t.textMuted, fontWeight: 500 },
   rating:  { fontSize: "12px", color: "#F59E0B", marginTop: "3px" },
+
+  /* Koordinatsız rota detay paneli */
+  routeDetail:       { background: "#fffbeb", border: `1.5px solid ${t.amberBorder}`, borderRadius: "12px", padding: "14px 16px", marginBottom: "10px" },
+  routeDetailHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" },
+  routeDetailTitle:  { fontSize: "14px", fontWeight: 700, color: t.text },
+  routeDetailClose:  { background: "none", border: "none", fontSize: "16px", color: t.textMuted, cursor: "pointer", lineHeight: 1 },
+  routeDetailDesc:   { fontSize: "12px", color: t.textMuted, marginBottom: "8px", lineHeight: 1.5, fontStyle: "italic" },
+  routeDetailInfo:   { fontSize: "12px", color: t.amber, fontWeight: 600, marginBottom: "10px" },
+  routeDetailList:   { display: "flex", flexDirection: "column", gap: "5px", maxHeight: "220px", overflowY: "auto", marginBottom: "10px" },
+  routeDetailItem:   { display: "flex", alignItems: "center", gap: "8px", padding: "5px 8px", borderRadius: "8px", background: "#fff", border: `1px solid ${t.border}` },
+  routeDetailNum:    { width: "20px", height: "20px", borderRadius: "50%", background: t.primaryLight, color: t.primary, fontSize: "11px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  routeDetailName:   { flex: 1, fontSize: "13px", color: t.text, fontWeight: 500 },
+  routeDetailDur:    { fontSize: "11px", color: t.textMuted, flexShrink: 0 },
+  routeDetailNote:   { fontSize: "11px", color: t.textMuted, lineHeight: 1.5, padding: "8px", background: "#fff", borderRadius: "8px", border: `1px solid ${t.border}` },
 };

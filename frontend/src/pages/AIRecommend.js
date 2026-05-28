@@ -53,6 +53,7 @@ export default function AIRecommend() {
   const [aiPlaces, setAiPlaces] = useState([]);       // [{name}] AI'dan gelen mekan listesi
   const [mapLoading, setMapLoading] = useState(false); // Geocoding yükleniyor
   const [mapMsg, setMapMsg] = useState("");            // "8/10 mekan bulundu" gibi
+  const [geocodedWaypoints, setGeocodedWaypoints] = useState(null); // showOnMap'ten gelen gerçek koordinatlar
 
   useEffect(() => {
     try {
@@ -95,6 +96,7 @@ export default function AIRecommend() {
     if (!finalCity) { setError("Lütfen bir şehir seçin veya girin."); return; }
     setError("");
     setResult("");
+    setGeocodedWaypoints(null); // yeni öneri için koordinatları sıfırla
     setSavedMsg("");
     setLoading(true);
     try {
@@ -223,6 +225,7 @@ export default function AIRecommend() {
 
     const optimized = nearestNeighbourSort(waypoints);
     setMapMsg(`${optimized.length}/${aiPlaces.length} mekan bulundu — optimize edildi, haritaya aktarılıyor...`);
+    setGeocodedWaypoints(optimized); // Kaydet butonunda kullanmak için sakla
 
     localStorage.setItem("load_route", JSON.stringify({
       id: `ai-${Date.now()}`,
@@ -250,12 +253,20 @@ export default function AIRecommend() {
     // 2) Backend'e rota olarak kaydet — Rotalar sayfasında görünsün
     try {
       const finalCity = customCity.trim() || city;
-      const waypoints = (aiPlaces || []).map(p => ({
-        name: p.name,
-        lat: 0,
-        lng: 0,
-        duration: p.duration || null,
-      }));
+      // "Haritada Aç" tıklanmışsa geocoded koordinatlar var; yoksa 0,0 ile kaydet
+      const waypoints = geocodedWaypoints
+        ? geocodedWaypoints.map(wp => ({
+            name: wp.name,
+            lat: wp.lat,
+            lng: wp.lng,
+            duration: wp.duration || null,
+          }))
+        : (aiPlaces || []).map(p => ({
+            name: p.name,
+            lat: 0,
+            lng: 0,
+            duration: p.duration || null,
+          }));
       await axios.post(
         `${API_URL}/api/routes/`,
         {
