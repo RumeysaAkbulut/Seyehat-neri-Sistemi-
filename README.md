@@ -20,18 +20,9 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 
 ## 📸 Ekran Görüntüleri
 
-| Dashboard | Harita & Rota | AI Öneri | Sosyal Akış |
-|---|---|---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Harita](docs/screenshots/map.png) | ![AI](docs/screenshots/ai.png) | ![Sosyal](docs/screenshots/social.png) |
-
-> **Ekran görüntüsü eklemek için:** Uygulamayı açıp aşağıdaki sayfaların ekran görüntüsünü al, `docs/screenshots/` klasörüne kaydet ve bu tabloyu güncelle.
->
-> | Dosya adı | Hangi sayfanın ekran görüntüsü |
-> |---|---|
-> | `dashboard.png` | Ana sayfa — http://localhost:3000 |
-> | `map.png` | Harita sayfası (birkaç pin ekleyip rota çiz) — http://localhost:3000/map |
-> | `ai.png` | AI Öneri sayfası (öneri aldıktan sonra) — http://localhost:3000/ai |
-> | `social.png` | Sosyal Akış sayfası — http://localhost:3000/social |
+| Dashboard | Harita & Rota | AI Öneri |
+|---|---|---|
+| ![Dashboard](docs/screenshots/dashboard.jpeg) | ![Harita](docs/screenshots/map.jpeg) | ![AI](docs/screenshots/ai.jpeg) |
 
 ---
 
