@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "flask db upgrade && gunicorn run:app --workers 2 --timeout 120"
+restartPolicyType = "ON_FAILURE"
