@@ -20,7 +20,18 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 
 ## 📸 Ekran Görüntüleri
 
-> *(Ekran görüntüleri buraya eklenecek: Dashboard, Harita, AI Rota, Sosyal Akış)*
+| Dashboard | Harita & Rota | AI Öneri | Sosyal Akış |
+|---|---|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Harita](docs/screenshots/map.png) | ![AI](docs/screenshots/ai.png) | ![Sosyal](docs/screenshots/social.png) |
+
+> **Ekran görüntüsü eklemek için:** Uygulamayı açıp aşağıdaki sayfaların ekran görüntüsünü al, `docs/screenshots/` klasörüne kaydet ve bu tabloyu güncelle.
+>
+> | Dosya adı | Hangi sayfanın ekran görüntüsü |
+> |---|---|
+> | `dashboard.png` | Ana sayfa — http://localhost:3000 |
+> | `map.png` | Harita sayfası (birkaç pin ekleyip rota çiz) — http://localhost:3000/map |
+> | `ai.png` | AI Öneri sayfası (öneri aldıktan sonra) — http://localhost:3000/ai |
+> | `social.png` | Sosyal Akış sayfası — http://localhost:3000/social |
 
 ---
 
@@ -43,6 +54,7 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 ## 🛠️ Teknoloji Yığını
 
 ### Backend
+
 | Teknoloji | Versiyon | Kullanım |
 |---|---|---|
 | Python | 3.11 | Ana dil |
@@ -55,6 +67,7 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 | Gunicorn | 23.x | Production WSGI sunucusu |
 
 ### Frontend
+
 | Teknoloji | Versiyon | Kullanım |
 |---|---|---|
 | React | 18 | SPA çatısı |
@@ -65,6 +78,7 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 | Nominatim (OSM) | — | Geocoding fallback |
 
 ### Altyapı & DevOps
+
 | Bileşen | Platform |
 |---|---|
 | Frontend Hosting | [Vercel](https://vercel.com) (otomatik deploy) |
@@ -96,6 +110,7 @@ backend/
 ```
 
 Her özellik için 4 katman mevcuttur:
+
 - **Model** → Veritabanı şeması ve ORM ilişkileri
 - **Repository** → `db.session` üzerinden CRUD ve sorgular
 - **Service** → İş kuralları (e-posta tekrarı, şifre uzunluğu vb.)
@@ -106,17 +121,20 @@ Her özellik için 4 katman mevcuttur:
 ## 🚀 Yerel Kurulum
 
 ### Gereksinimler
+
 - Python 3.11+
 - Node.js 18+
 - Gemini API anahtarı → [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ### 1. Repoyu Klonla
+
 ```bash
 git clone https://github.com/RumeysaAkbulut/travel-recommendation-system.git
 cd travel-recommendation-system
 ```
 
 ### 2. Backend
+
 ```bash
 cd backend
 python -m venv venv
@@ -125,6 +143,7 @@ pip install -r requirements.txt
 ```
 
 `backend/.env` dosyası oluştur:
+
 ```env
 SECRET_KEY=gizli-bir-anahtar
 JWT_SECRET_KEY=jwt-gizli-anahtar
@@ -133,6 +152,7 @@ GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
 
 Veritabanını başlat ve sunucuyu çalıştır:
+
 ```bash
 flask db upgrade
 python run.py
@@ -140,12 +160,14 @@ python run.py
 ```
 
 ### 3. Frontend
+
 ```bash
-cd frontend
+cd ../frontend
 npm install
 ```
 
 `frontend/.env` dosyası oluştur:
+
 ```env
 REACT_APP_API_URL=http://localhost:5001
 ```
@@ -178,6 +200,7 @@ python -m pytest tests/ -v
 ## 📡 API Referansı
 
 ### Auth
+
 ```
 POST   /api/users/register      Kayıt ol
 POST   /api/users/login         Giriş yap → JWT token
@@ -186,6 +209,7 @@ PUT    /api/users/me            Profil güncelle      [JWT]
 ```
 
 ### Mekanlar
+
 ```
 GET    /api/places/             Listele (city, category, search filtresi)  [JWT]
 POST   /api/places/             Mekan ekle                                 [JWT]
@@ -195,6 +219,7 @@ DELETE /api/places/<id>         Sil                                        [JWT]
 ```
 
 ### Rotalar
+
 ```
 GET    /api/routes/             Kullanıcının rotaları    [JWT]
 POST   /api/routes/             Rota kaydet              [JWT]
@@ -205,6 +230,7 @@ GET    /share/route/<token>     Paylaşılan rotayı gör    [Anonim]
 ```
 
 ### AI & Sosyal
+
 ```
 POST   /api/ai/recommend              Gemini AI rota önerisi          [JWT]
 GET    /api/social/feed               Sosyal akış                     [JWT]
@@ -217,7 +243,7 @@ GET    /api/social/user/<id>/profile  Kullanıcı profili               [JWT]
 
 ---
 
-## ☁️ Production Deploy
+## ☁️ Canlı Demo & Deploy
 
 Uygulama ücretsiz platformlarda canlıdır:
 
@@ -230,6 +256,7 @@ Uygulama ücretsiz platformlarda canlıdır:
 ### Ortam Değişkenleri
 
 **Railway (Backend):**
+
 ```
 SECRET_KEY          → Rastgele güvenli string
 JWT_SECRET_KEY      → Rastgele güvenli string
@@ -239,11 +266,13 @@ FRONTEND_URL        → https://seyehat-neri-sistemi.vercel.app
 ```
 
 **Vercel (Frontend):**
+
 ```
 REACT_APP_API_URL   → Railway backend URL
 ```
 
 ### CI/CD Akışı
+
 ```
 Push / Pull Request
         │
@@ -261,7 +290,7 @@ Push / Pull Request
 ## 📁 Proje Yapısı
 
 ```
-Seyehat-neri-Sistemi-/
+travel-recommendation-system/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                  # GitHub Actions CI pipeline
@@ -340,10 +369,19 @@ Seyehat-neri-Sistemi-/
 │       ├── api.js                  # Merkezi API URL konfigürasyonu
 │       ├── theme.js                # Renk ve stil sabitleri
 │       └── App.js
-├── render.yaml                     # Render deploy şablonu (referans)
 ├── .gitignore
 └── README.md
 ```
+
+---
+
+## 🤝 Katkı Sağlama
+
+1. Bu repoyu fork'la
+2. Yeni bir branch oluştur: `git checkout -b feature/ozellik-adi`
+3. Değişikliklerini commit et: `git commit -m "feat: yeni özellik eklendi"`
+4. Branch'i push'la: `git push origin feature/ozellik-adi`
+5. Pull Request aç
 
 ---
 
