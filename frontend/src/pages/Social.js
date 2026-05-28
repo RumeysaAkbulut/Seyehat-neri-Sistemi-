@@ -217,34 +217,9 @@ function UserProfile({ user, token, navigate, onClose }) {
           ? <div style={sp.empty}>Henüz kaydettiği rota yok.</div>
           : <div style={sp.list}>
 
-              {/* Koordinatsız rota detay mini paneli */}
-              {detailRoute && (
-                <div style={sp.routeDetail}>
-                  <div style={sp.routeDetailHeader}>
-                    <span style={sp.routeDetailTitle}>{detailRoute.name}</span>
-                    <button style={sp.routeDetailClose} onClick={() => setDetailRoute(null)}>✕</button>
-                  </div>
-                  {detailRoute.description && (
-                    <div style={sp.routeDetailDesc}>{detailRoute.description}</div>
-                  )}
-                  <div style={sp.routeDetailInfo}>📍 {detailRoute.waypoint_count} durak · AI rotası (koordinatsız)</div>
-                  <div style={sp.routeDetailList}>
-                    {(detailRoute.waypoints || []).map((wp, i) => (
-                      <div key={i} style={sp.routeDetailItem}>
-                        <span style={sp.routeDetailNum}>{i + 1}</span>
-                        <span style={sp.routeDetailName}>{wp.name || "Mekan"}</span>
-                        {wp.duration && <span style={sp.routeDetailDur}>{wp.duration}</span>}
-                      </div>
-                    ))}
-                  </div>
-                  <div style={sp.routeDetailNote}>
-                    ℹ️ Bu rotayı haritada görmek için kendi AI Rotaları sayfandan aynı şehir için oluştur.
-                  </div>
-                </div>
-              )}
-
               {routes.map(r => {
                 const hasCoords = (r.waypoints || []).some(w => (w.lat !== 0 || w.lng !== 0) && w.lat != null);
+                const isOpen = detailRoute?.id === r.id;
                 const handleRouteClick = () => {
                   if (hasCoords) {
                     localStorage.setItem("load_route", JSON.stringify({
@@ -254,30 +229,50 @@ function UserProfile({ user, token, navigate, onClose }) {
                     }));
                     navigate("/map");
                   } else {
-                    // Koordinat yok — detay panelini göster
-                    setDetailRoute(detailRoute?.id === r.id ? null : r);
+                    setDetailRoute(isOpen ? null : r);
                   }
                 };
-                const isSelected = detailRoute?.id === r.id;
                 return (
-                  <div key={r.id}
-                       style={{...sp.item, cursor:"pointer", ...(isSelected ? {borderColor: t.primary, background: t.primaryLight} : {})}}
-                       onClick={handleRouteClick}>
-                    <div style={{...sp.itemImg, background: t.primaryLight}}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/></svg>
-                    </div>
-                    <div style={sp.itemBody}>
-                      <div style={sp.itemName}>{r.name}</div>
-                      {r.description && <div style={sp.itemDesc}>{r.description}</div>}
-                      <div style={sp.itemMeta}>
-                        <span style={sp.catTag}>{r.waypoint_count} durak</span>
-                        <span style={{fontSize:"11px", color:t.textMuted}}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
-                        {hasCoords
-                          ? <span style={{fontSize:"11px", color:t.primary, fontWeight:600}}>🗺️ Haritada gör</span>
-                          : <span style={{fontSize:"11px", color:t.amber, fontWeight:600}}>📋 Listeyi gör</span>}
+                  <div key={r.id}>
+                    {/* Rota kartı */}
+                    <div
+                      style={{...sp.item, cursor:"pointer", ...(isOpen ? {borderColor: t.primary, borderBottomLeftRadius:0, borderBottomRightRadius:0, borderBottom:"none"} : {})}}
+                      onClick={handleRouteClick}>
+                      <div style={{...sp.itemImg, background: t.primaryLight}}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 1 8 8c0 5.25-8 14-8 14S4 15.25 4 10a8 8 0 0 1 8-8z"/></svg>
                       </div>
+                      <div style={sp.itemBody}>
+                        <div style={sp.itemName}>{r.name}</div>
+                        {r.description && <div style={sp.itemDesc}>{r.description}</div>}
+                        <div style={sp.itemMeta}>
+                          <span style={sp.catTag}>{r.waypoint_count} durak</span>
+                          <span style={{fontSize:"11px", color:t.textMuted}}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+                          {hasCoords
+                            ? <span style={{fontSize:"11px", color:t.primary, fontWeight:600}}>🗺️ Haritada gör</span>
+                            : <span style={{fontSize:"11px", color:t.amber, fontWeight:600}}>📋 {isOpen ? "Kapat ▲" : "Listeyi gör ▼"}</span>}
+                        </div>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points={isOpen ? "15 18 9 12 15 6" : "9 18 15 12 9 6"}/></svg>
                     </div>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+
+                    {/* Accordion: koordinatsız rota detayı, kartın hemen altında */}
+                    {isOpen && (
+                      <div style={sp.routeDetail}>
+                        <div style={sp.routeDetailInfo}>📍 {r.waypoint_count} durak · AI rotası</div>
+                        <div style={sp.routeDetailList}>
+                          {(r.waypoints || []).map((wp, i) => (
+                            <div key={i} style={sp.routeDetailItem}>
+                              <div style={sp.routeDetailNum}>{i + 1}</div>
+                              <span style={sp.routeDetailName}>{wp.name || "Mekan"}</span>
+                              {wp.duration && <span style={sp.routeDetailDur}>{wp.duration}</span>}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={sp.routeDetailNote}>
+                          ℹ️ Haritada görmek için AI Rotaları sayfasından aynı şehir için oluştur, ardından "Kaydet" ile kaydet.
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -599,7 +594,7 @@ const sp = {
   rating:  { fontSize: "12px", color: "#F59E0B", marginTop: "3px" },
 
   /* Koordinatsız rota detay paneli */
-  routeDetail:       { background: "#fffbeb", border: `1.5px solid ${t.amberBorder}`, borderRadius: "12px", padding: "14px 16px", marginBottom: "10px" },
+  routeDetail:       { background: "#fffbeb", border: `1.5px solid ${t.primary}`, borderTop: "none", borderRadius: "0 0 12px 12px", padding: "12px 16px", marginBottom: "4px" },
   routeDetailHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" },
   routeDetailTitle:  { fontSize: "14px", fontWeight: 700, color: t.text },
   routeDetailClose:  { background: "none", border: "none", fontSize: "16px", color: t.textMuted, cursor: "pointer", lineHeight: 1 },
