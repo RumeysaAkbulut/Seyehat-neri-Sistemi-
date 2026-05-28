@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🗺️ Seyahat Öneri Sistemi
+# Seyahat Öneri Sistemi
 
 **Yapay zeka destekli, tam yığın seyahat planlama uygulaması**
 
@@ -18,7 +18,7 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 
 ---
 
-## 📸 Ekran Görüntüleri
+##  Ekran Görüntüleri
 
 | Dashboard | Harita & Rota | AI Öneri |
 |---|---|---|
@@ -26,23 +26,23 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 
 ---
 
-## ✨ Özellikler
+## Özellikler
 
 | Modül | Özellikler |
 |---|---|
-| 🔐 **Kimlik Doğrulama** | JWT tabanlı kayıt/giriş, 7 günlük oturum, şifre hash (bcrypt) |
-| 🏛️ **Mekan Keşfi** | Şehir & kategori filtresi, metin arama, detay sayfası, Wikipedia entegrasyonu |
-| 🗺️ **İnteraktif Harita** | Leaflet harita, Overpass API POI çekme, GPS konumu, uydu/cadde görünümü |
-| 🤖 **AI Rota Önerisi** | Gemini API ile şehir/süre/bütçe bazlı gezi planı, otomatik geocoding, haritada görselleştirme |
-| 📍 **Rota Yönetimi** | Haritadan tıklayarak rota oluşturma, en yakın komşu optimizasyonu, kaydetme & paylaşma |
-| ❤️ **Favoriler & Koleksiyonlar** | Mekan favorileme, özel koleksiyon oluşturma ve yönetme |
-| ⭐ **Yorum & Puanlama** | 1-5 yıldız puanlama, metin yorum, ortalama puan hesaplama |
-| 👥 **Sosyal Akış** | Kullanıcı takip sistemi, aktivite akışı, arkadaşların rotalarını görüntüleme |
-| 📊 **Aktivite Geçmişi** | Kişisel ve sosyal aktivite takibi |
+|  **Kimlik Doğrulama** | JWT tabanlı kayıt/giriş, 7 günlük oturum, şifre hash (bcrypt) |
+|  **Mekan Keşfi** | Şehir & kategori filtresi, metin arama, detay sayfası, Wikipedia entegrasyonu |
+|  **İnteraktif Harita** | Leaflet harita, Overpass API POI çekme, GPS konumu, uydu/cadde görünümü |
+|  **AI Rota Önerisi** | Gemini API ile şehir/süre/bütçe bazlı gezi planı, otomatik geocoding, haritada görselleştirme |
+|  **Rota Yönetimi** | Haritadan tıklayarak rota oluşturma, en yakın komşu optimizasyonu, kaydetme & paylaşma |
+|  **Favoriler & Koleksiyonlar** | Mekan favorileme, özel koleksiyon oluşturma ve yönetme |
+|  **Yorum & Puanlama** | 1-5 yıldız puanlama, metin yorum, ortalama puan hesaplama |
+|  **Sosyal Akış** | Kullanıcı takip sistemi, aktivite akışı, arkadaşların rotalarını görüntüleme |
+|  **Aktivite Geçmişi** | Kişisel ve sosyal aktivite takibi |
 
 ---
 
-## 🛠️ Teknoloji Yığını
+##  Teknoloji Yığını
 
 ### Backend
 
@@ -80,7 +80,7 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 
 ---
 
-## 🏗️ Mimari
+##  Mimari
 
 Proje **Katmanlı N-Tier Mimari** + **Repository Pattern** + **Service Layer** üzerine inşa edilmiştir:
 
@@ -109,7 +109,7 @@ Her özellik için 4 katman mevcuttur:
 
 ---
 
-## 🚀 Yerel Kurulum
+##  Yerel Kurulum
 
 ### Gereksinimler
 
@@ -170,7 +170,7 @@ npm start
 
 ---
 
-## 🧪 Testler
+##  Testler
 
 ```bash
 cd backend
@@ -188,7 +188,7 @@ python -m pytest tests/ -v
 
 ---
 
-## 📡 API Referansı
+##  API Referansı
 
 ### Auth
 
@@ -234,7 +234,7 @@ GET    /api/social/user/<id>/profile  Kullanıcı profili               [JWT]
 
 ---
 
-## ☁️ Canlı Demo & Deploy
+##  Canlı Demo & Deploy
 
 Uygulama ücretsiz platformlarda canlıdır:
 
@@ -273,12 +273,12 @@ Push / Pull Request
                 │
         develop branch merge
                 │
-        Vercel otomatik deploy ✅
+        Vercel otomatik deploy 
 ```
 
 ---
 
-## 📁 Proje Yapısı
+##  Proje Yapısı
 
 ```
 travel-recommendation-system/
@@ -366,7 +366,7 @@ travel-recommendation-system/
 
 ---
 
-## 🤝 Katkı Sağlama
+##  Katkı Sağlama
 
 1. Bu repoyu fork'la
 2. Yeni bir branch oluştur: `git checkout -b feature/ozellik-adi`
@@ -376,7 +376,7 @@ travel-recommendation-system/
 
 ---
 
-## 👥 Takım
+##  Takım
 
 | İsim | Rol |
 |---|---|
@@ -386,6 +386,6 @@ travel-recommendation-system/
 
 ---
 
-## 📄 Lisans
+##  Lisans
 
 Bu proje [MIT](LICENSE) lisansı ile lisanslanmıştır.
