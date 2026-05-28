@@ -6,7 +6,7 @@
 
 Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşlarınla paylaş
 
-[![CI/CD Pipeline](https://github.com/RumeysaAkbulut/Seyehat-neri-Sistemi-/actions/workflows/ci.yml/badge.svg)](https://github.com/RumeysaAkbulut/Seyehat-neri-Sistemi-/actions)
+[![CI/CD Pipeline](https://github.com/RumeysaAkbulut/travel-recommendation-system/actions/workflows/ci.yml/badge.svg)](https://github.com/RumeysaAkbulut/travel-recommendation-system/actions)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
@@ -112,8 +112,8 @@ Her özellik için 4 katman mevcuttur:
 
 ### 1. Repoyu Klonla
 ```bash
-git clone https://github.com/RumeysaAkbulut/Seyehat-neri-Sistemi-.git
-cd Seyehat-neri-Sistemi-
+git clone https://github.com/RumeysaAkbulut/travel-recommendation-system.git
+cd travel-recommendation-system
 ```
 
 ### 2. Backend
