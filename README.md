@@ -12,7 +12,7 @@ Mekanları keşfet · AI ile rota al · Haritada görselleştir · Arkadaşları
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**[🌐 Canlı Demo](https://seyehat-neri-sistemi.vercel.app)** · **[📡 API](https://seyahat-oneri-backend-production-5d8f.up.railway.app)** · **[📋 Jira](https://your-jira-link)**
+**[ Canlı Demo](https://seyehat-neri-sistemi.vercel.app)** · **[ API](https://seyahat-oneri-backend-production-5d8f.up.railway.app)** · **[ Jira](https://your-jira-link)**
 
 </div>
 
@@ -376,15 +376,7 @@ travel-recommendation-system/
 
 ---
 
-##  Takım
 
-| İsim | Rol |
-|---|---|
-| [Takım Üyesi 1] | Backend & Mimari |
-| [Takım Üyesi 2] | Backend & Veritabanı |
-| [Takım Üyesi 3] | Frontend & Test |
-
----
 
 ##  Lisans
 
