@@ -1,3 +1,4 @@
+// Kullanıcı giriş işlemlerini yöneten sayfa bileşeni
 import API_URL from '../api';
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
